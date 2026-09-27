@@ -1,0 +1,6 @@
+{
+  "name": "Ferretería Almacenes Nor Oriente",
+  "description": "Gestor de productos de construcción y catálogo interactivo para clientes. Cotizaciones, fichas técnicas y exportación PDF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

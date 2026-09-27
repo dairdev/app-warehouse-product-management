@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none">
+  <!-- House Outline with stylized N in yellow -->
+  <g stroke="#EAB308" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Outer house outline -->
+    <path d="M 60 135 L 60 85 L 120 40 L 180 85 L 180 135 L 60 135 Z" />
+    <!-- Stylized internal N diagonal and uprights -->
+    <path d="M 90 135 L 90 75 L 150 120 L 150 60" />
+  </g>
+  <!-- Text: ALMACENES -->
+  <text x="120" y="172" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="14" font-weight="600" letter-spacing="4" fill="#334155">
+    ALMACENES
+  </text>
+  <!-- Text: NOR ORIENTE -->
+  <text x="120" y="196" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="20" font-weight="800" letter-spacing="1" fill="#0F172A">
+    NOR ORIENTE
+  </text>
+</svg>
