@@ -1,7 +1,7 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, execSync, ChildProcess } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
@@ -12,6 +12,12 @@ const PHP_PORT = 8080;
 let phpProcess: ChildProcess | null = null;
 
 function startPhpServer(): ChildProcess {
+  try {
+    execSync('killall php 2>/dev/null || true');
+  } catch {
+    // ignore
+  }
+
   const backendPublic = path.resolve(process.cwd(), 'backend/public');
   const indexPhp = path.join(backendPublic, 'index.php');
 
@@ -64,18 +70,17 @@ async function main() {
     createProxyMiddleware({
       target: `http://127.0.0.1:${PHP_PORT}`,
       changeOrigin: true,
-      pathRewrite: (path) => path, // keep /api prefix
-      onError: (err, req, res) => {
-        console.error('[Proxy Error]:', err.message);
-        if (!res.headersSent) {
-          res.writeHead(502, { 'Content-Type': 'application/json' });
-          res.end(
-            JSON.stringify({
+      on: {
+        error: (err, _req, res) => {
+          console.error('[Proxy Error]:', err.message);
+          const response = res as express.Response;
+          if (!response.headersSent) {
+            response.status(502).json({
               error: 'No se pudo conectar con el backend Slim PHP',
               details: err.message,
-            })
-          );
-        }
+            });
+          }
+        },
       },
     })
   );

@@ -20,16 +20,16 @@ require __DIR__ . '/../vendor/autoload.php';
 
 $app = AppFactory::create();
 
+// Routing middleware (innermost)
+$app->addRoutingMiddleware();
+
 // Parse JSON request bodies
 $app->add(new JsonBodyParserMiddleware());
 
-// CORS headers
+// CORS middleware (runs before routing to handle OPTIONS preflights cleanly)
 $app->add(new CorsMiddleware());
 
-// Routing middleware
-$app->addRoutingMiddleware();
-
-// Error handling middleware
+// Error handling middleware (outermost)
 $errorMiddleware = $app->addErrorMiddleware(true, true, true);
 
 // Root endpoint
@@ -44,13 +44,8 @@ $app->get('/', function (Request $request, Response $response): Response {
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-// Options catch-all for CORS preflights
-$app->options('/{routes:.+}', function (Request $request, Response $response): Response {
-    return $response;
-});
-
-// API Routes group
-$app->group('/api', function (RouteCollectorProxy $group): void {
+// Register application API routes
+$registerApiRoutes = function (RouteCollectorProxy $group): void {
     // Health & Info
     $group->get('/health', [HealthController::class, 'check']);
 
@@ -91,6 +86,10 @@ $app->group('/api', function (RouteCollectorProxy $group): void {
     // Tags
     $group->get('/tags', [TagController::class, 'list']);
     $group->post('/tags', [TagController::class, 'create']);
-});
+};
+
+// Mount routes under /api and also root for proxy compatibility
+$app->group('/api', $registerApiRoutes);
+$app->group('', $registerApiRoutes);
 
 $app->run();

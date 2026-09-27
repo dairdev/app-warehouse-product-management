@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Product, Category, User, Brand } from '../types';
 import { ProductFormModal } from '../components/ProductFormModal';
+import { SlimApiStatusTab } from '../components/SlimApiStatusTab';
 import { formatCurrency } from '../utils/shareUtils';
 import { downloadFullCatalogPdf } from '../utils/pdfExport';
 import {
@@ -59,9 +60,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     deleteUser,
     updateStoreSettings,
     showToast,
+    backendStatus,
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'brands' | 'users' | 'settings' | 'export'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'brands' | 'users' | 'settings' | 'export' | 'api'>('products');
 
   // Product management state
   const [productSearch, setProductSearch] = useState('');
@@ -452,6 +454,41 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             }`}
           >
             Exportar Catálogos PDF
+          </button>
+
+          {/* Slim PHP RESTful API Tab */}
+          <button
+            onClick={() => setActiveTab('api')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 ${
+              activeTab === 'api'
+                ? 'border-yellow-400 text-white'
+                : 'border-transparent text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            <span className="flex h-2 w-2 relative">
+              <span
+                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  backendStatus === 'online' ? 'bg-emerald-400' : backendStatus === 'connecting' ? 'bg-amber-400' : 'bg-red-400'
+                }`}
+              />
+              <span
+                className={`relative inline-flex rounded-full h-2 w-2 ${
+                  backendStatus === 'online' ? 'bg-emerald-500' : backendStatus === 'connecting' ? 'bg-amber-500' : 'bg-red-500'
+                }`}
+              />
+            </span>
+            <span>API Slim PHP (REST)</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                backendStatus === 'online'
+                  ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-800/60'
+                  : backendStatus === 'connecting'
+                  ? 'bg-amber-950/70 text-amber-300 border border-amber-800/60'
+                  : 'bg-red-950/70 text-red-300 border border-red-800/60'
+              }`}
+            >
+              {backendStatus === 'online' ? 'Online' : backendStatus === 'connecting' ? 'Conectando...' : 'Offline'}
+            </span>
           </button>
         </div>
       </div>
@@ -1583,6 +1620,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </div>
           </div>
         )}
+
+        {/* TAB 7: SLIM PHP RESTful API STATUS & DIAGNOSTICS */}
+        {activeTab === 'api' && <SlimApiStatusTab />}
       </main>
 
       {/* Product Form Modal (Create / Edit) */}

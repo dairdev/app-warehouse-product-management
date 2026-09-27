@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   Product,
   Category,
@@ -18,6 +18,7 @@ import {
   INITIAL_BRANDS,
 } from '../data/initialData';
 import { STORE_INFO } from '../utils/shareUtils';
+import { apiService, SlimHealthResponse } from '../services/apiService';
 
 interface ToastMessage {
   id: string;
@@ -36,6 +37,11 @@ interface StoreContextType {
   clientProfile: ClientProfile;
   storeSettings: StoreSettings;
   toasts: ToastMessage[];
+
+  // Backend Status (Slim PHP)
+  backendStatus: 'online' | 'connecting' | 'offline';
+  backendInfo: SlimHealthResponse | null;
+  reloadFromApi: () => Promise<void>;
 
   // Auth & Roles
   login: (email: string, password?: string) => Promise<boolean>;
@@ -159,6 +165,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
+  // Backend state
+  const [backendStatus, setBackendStatus] = useState<'online' | 'connecting' | 'offline'>('connecting');
+  const [backendInfo, setBackendInfo] = useState<SlimHealthResponse | null>(null);
+
   // Current logged in user (null = Guest / Public client)
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
@@ -232,6 +242,51 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(storeSettings));
   }, [storeSettings]);
 
+  // Load from Slim PHP REST API on mount
+  const reloadFromApi = useCallback(async () => {
+    try {
+      setBackendStatus('connecting');
+      const health = await apiService.getHealth();
+      setBackendInfo(health);
+      setBackendStatus('online');
+
+      const [settRes, catRes, brandRes, prodRes, userRes, tagRes] = await Promise.allSettled([
+        apiService.getSettings(),
+        apiService.getCategories(),
+        apiService.getBrands(),
+        apiService.getProducts(),
+        apiService.getUsers(),
+        apiService.getTags(),
+      ]);
+
+      if (settRes.status === 'fulfilled' && settRes.value) {
+        setStoreSettings((prev) => ({ ...prev, ...settRes.value }));
+      }
+      if (catRes.status === 'fulfilled' && catRes.value?.length) {
+        setCategories(catRes.value);
+      }
+      if (brandRes.status === 'fulfilled' && brandRes.value?.length) {
+        setBrands(brandRes.value);
+      }
+      if (prodRes.status === 'fulfilled' && prodRes.value?.length) {
+        setProducts(prodRes.value);
+      }
+      if (userRes.status === 'fulfilled' && userRes.value?.length) {
+        setUsers(userRes.value);
+      }
+      if (tagRes.status === 'fulfilled' && tagRes.value?.length) {
+        setTags(tagRes.value);
+      }
+    } catch (err) {
+      console.warn('[StoreContext] Could not connect to Slim PHP backend, using local cache:', err);
+      setBackendStatus('offline');
+    }
+  }, []);
+
+  useEffect(() => {
+    reloadFromApi();
+  }, [reloadFromApi]);
+
   // Notifications
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     const id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
@@ -260,7 +315,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...prev,
       ...newSettings,
     }));
-    showToast('Datos de la ferretería actualizados correctamente');
+    // Sync with Slim PHP backend
+    apiService.updateSettings(newSettings).catch((err) => {
+      console.warn('[API] Error syncing settings with Slim PHP:', err.message);
+    });
+    showToast('Datos de la ferretería actualizados y sincronizados con el servidor');
     return true;
   };
 
@@ -316,6 +375,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updatedAt: new Date().toISOString(),
     };
     setProducts((prev) => [newProduct, ...prev]);
+    // Persist to Slim PHP
+    apiService.createProduct(newProduct).catch((err) => {
+      console.warn('[API] Error creating product on Slim PHP:', err.message);
+    });
     showToast(`Producto "${newProduct.name}" registrado con éxito`);
     return newProduct;
   };
@@ -332,12 +395,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           : item
       )
     );
+    // Persist to Slim PHP
+    apiService.updateProduct(id, productData).catch((err) => {
+      console.warn('[API] Error updating product on Slim PHP:', err.message);
+    });
     showToast('Producto actualizado correctamente');
     return true;
   };
 
   const deleteProduct = (id: string): boolean => {
     setProducts((prev) => prev.filter((item) => item.id !== id));
+    // Persist to Slim PHP
+    apiService.deleteProduct(id).catch((err) => {
+      console.warn('[API] Error deleting product on Slim PHP:', err.message);
+    });
     showToast('Producto eliminado del catálogo', 'info');
     return true;
   };
@@ -358,6 +429,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id,
     };
     setBrands((prev) => [...prev, newBrand]);
+    // Persist to Slim PHP
+    apiService.createBrand(newBrand).catch((err) => {
+      console.warn('[API] Error creating brand on Slim PHP:', err.message);
+    });
     showToast(`Marca "${newBrand.name}" agregada con éxito`);
     return newBrand;
   };
@@ -366,6 +441,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setBrands((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...data } : b))
     );
+    // Persist to Slim PHP
+    apiService.updateBrand(id, data).catch((err) => {
+      console.warn('[API] Error updating brand on Slim PHP:', err.message);
+    });
     showToast('Marca actualizada');
     return true;
   };
@@ -377,6 +456,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return false;
     }
     setBrands((prev) => prev.filter((b) => b.id !== id));
+    // Persist to Slim PHP
+    apiService.deleteBrand(id).catch((err) => {
+      console.warn('[API] Error deleting brand on Slim PHP:', err.message);
+    });
     showToast('Marca eliminada', 'info');
     return true;
   };
@@ -389,6 +472,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id,
     };
     setCategories((prev) => [...prev, newCat]);
+    // Persist to Slim PHP
+    apiService.createCategory(newCat).catch((err) => {
+      console.warn('[API] Error creating category on Slim PHP:', err.message);
+    });
     showToast(`Categoría "${newCat.name}" agregada con éxito`);
     return newCat;
   };
@@ -397,6 +484,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCategories((prev) =>
       prev.map((cat) => (cat.id === id ? { ...cat, ...data } : cat))
     );
+    // Persist to Slim PHP
+    apiService.updateCategory(id, data).catch((err) => {
+      console.warn('[API] Error updating category on Slim PHP:', err.message);
+    });
     showToast('Categoría actualizada');
     return true;
   };
@@ -409,6 +500,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return false;
     }
     setCategories((prev) => prev.filter((cat) => cat.id !== id && cat.parentId !== id));
+    // Persist to Slim PHP
+    apiService.deleteCategory(id).catch((err) => {
+      console.warn('[API] Error deleting category on Slim PHP:', err.message);
+    });
     showToast('Categoría eliminada', 'info');
     return true;
   };
@@ -435,6 +530,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updatedAt: new Date().toISOString(),
     };
     setUsers((prev) => [...prev, newUser]);
+    // Persist to Slim PHP
+    apiService.createUser(newUser).catch((err) => {
+      console.warn('[API] Error creating user on Slim PHP:', err.message);
+    });
     showToast(`Usuario ${newUser.name} creado con éxito`);
     return true;
   };
@@ -447,6 +546,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUsers((prev) =>
       prev.map((u) => (u.id === id ? { ...u, ...data, updatedAt: new Date().toISOString() } : u))
     );
+    // Persist to Slim PHP
+    apiService.updateUser(id, data).catch((err) => {
+      console.warn('[API] Error updating user on Slim PHP:', err.message);
+    });
     showToast('Usuario actualizado');
     return true;
   };
@@ -461,6 +564,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return false;
     }
     setUsers((prev) => prev.filter((u) => u.id !== id));
+    // Persist to Slim PHP
+    apiService.deleteUser(id).catch((err) => {
+      console.warn('[API] Error deleting user on Slim PHP:', err.message);
+    });
     showToast('Usuario eliminado', 'info');
     return true;
   };
@@ -549,6 +656,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         clientProfile,
         storeSettings,
         toasts,
+        backendStatus,
+        backendInfo,
+        reloadFromApi,
         login,
         logout,
         switchRole,

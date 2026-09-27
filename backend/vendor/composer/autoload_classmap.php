@@ -6,6 +6,17 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'App\\Config\\Database' => $baseDir . '/src/Config/Database.php',
+    'App\\Controllers\\BaseController' => $baseDir . '/src/Controllers/BaseController.php',
+    'App\\Controllers\\BrandController' => $baseDir . '/src/Controllers/BrandController.php',
+    'App\\Controllers\\CategoryController' => $baseDir . '/src/Controllers/CategoryController.php',
+    'App\\Controllers\\HealthController' => $baseDir . '/src/Controllers/HealthController.php',
+    'App\\Controllers\\ProductController' => $baseDir . '/src/Controllers/ProductController.php',
+    'App\\Controllers\\SettingsController' => $baseDir . '/src/Controllers/SettingsController.php',
+    'App\\Controllers\\TagController' => $baseDir . '/src/Controllers/TagController.php',
+    'App\\Controllers\\UserController' => $baseDir . '/src/Controllers/UserController.php',
+    'App\\Middleware\\CorsMiddleware' => $baseDir . '/src/Middleware/CorsMiddleware.php',
+    'App\\Middleware\\JsonBodyParserMiddleware' => $baseDir . '/src/Middleware/JsonBodyParserMiddleware.php',
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
     'FastRoute\\BadRouteException' => $vendorDir . '/nikic/fast-route/src/BadRouteException.php',
     'FastRoute\\DataGenerator' => $vendorDir . '/nikic/fast-route/src/DataGenerator.php',

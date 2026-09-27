@@ -27,7 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigate,
   onOpenSqlViewer,
 }) => {
-  const { currentUser, clientProfile, storeSettings, logout, switchRole, resetAllData } = useStore();
+  const { currentUser, clientProfile, storeSettings, logout, switchRole, resetAllData, backendStatus } = useStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
 
@@ -102,10 +102,19 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenSqlViewer}
               className="text-stone-500 hover:text-stone-900 transition-colors py-1 flex items-center gap-1.5 text-xs font-mono"
-              title="Ver Esquema MySQL y Scripts de Inicialización"
+              title="Ver Esquema SQL y Scripts de Inicialización"
             >
               <Database className="w-3.5 h-3.5 text-stone-400" />
               <span>schema.sql</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('admin-dashboard')}
+              className="text-stone-500 hover:text-stone-900 transition-colors py-1 flex items-center gap-1.5 text-xs font-mono"
+              title="Slim PHP RESTful API"
+            >
+              <span className={`w-2 h-2 rounded-full ${backendStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              <span>API Slim PHP</span>
             </button>
           </nav>
 

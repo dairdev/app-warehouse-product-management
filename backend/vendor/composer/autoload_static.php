@@ -77,6 +77,17 @@ class ComposerStaticInitff5b82dd8fcaab90a21229edef4b245b
     );
 
     public static $classMap = array (
+        'App\\Config\\Database' => __DIR__ . '/../..' . '/src/Config/Database.php',
+        'App\\Controllers\\BaseController' => __DIR__ . '/../..' . '/src/Controllers/BaseController.php',
+        'App\\Controllers\\BrandController' => __DIR__ . '/../..' . '/src/Controllers/BrandController.php',
+        'App\\Controllers\\CategoryController' => __DIR__ . '/../..' . '/src/Controllers/CategoryController.php',
+        'App\\Controllers\\HealthController' => __DIR__ . '/../..' . '/src/Controllers/HealthController.php',
+        'App\\Controllers\\ProductController' => __DIR__ . '/../..' . '/src/Controllers/ProductController.php',
+        'App\\Controllers\\SettingsController' => __DIR__ . '/../..' . '/src/Controllers/SettingsController.php',
+        'App\\Controllers\\TagController' => __DIR__ . '/../..' . '/src/Controllers/TagController.php',
+        'App\\Controllers\\UserController' => __DIR__ . '/../..' . '/src/Controllers/UserController.php',
+        'App\\Middleware\\CorsMiddleware' => __DIR__ . '/../..' . '/src/Middleware/CorsMiddleware.php',
+        'App\\Middleware\\JsonBodyParserMiddleware' => __DIR__ . '/../..' . '/src/Middleware/JsonBodyParserMiddleware.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'FastRoute\\BadRouteException' => __DIR__ . '/..' . '/nikic/fast-route/src/BadRouteException.php',
         'FastRoute\\DataGenerator' => __DIR__ . '/..' . '/nikic/fast-route/src/DataGenerator.php',
