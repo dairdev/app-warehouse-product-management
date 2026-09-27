@@ -1,0 +1,54 @@
+# Configuración de Nginx para Ferretería Almacenes Nor Oriente (Despliegue PHP sin Node.js)
+# Ubicación típica: /etc/nginx/sites-available/almacenesnororiente.conf
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name tu-dominio.com www.tu-dominio.com;
+
+    # Directorio raíz que contiene index.php, index.html y la carpeta assets/
+    root /var/www/almacenesnororiente/backend/public;
+    index index.html index.php;
+
+    charset utf-8;
+
+    # Compresión GZIP para assets de alta velocidad
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+
+    # 1. Peticiones de API RESTful hacia Slim PHP
+    location /api/ {
+        try_files $uri /index.php$is_args$args;
+    }
+
+    # 2. Archivos estáticos de Vite (JS, CSS, imágenes)
+    location /assets/ {
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
+        try_files $uri =404;
+    }
+
+    # 3. Aplicación Web Frontend (SPA React)
+    # Cualquier ruta no existente (ej. /catalogo, /admin, etc.) se entrega con index.html
+    location / {
+        try_files $uri $uri/ /index.html /index.php$is_args$args;
+    }
+
+    # 4. Procesamiento PHP mediante PHP-FPM (Ejemplo: PHP 8.2)
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        # O si usa TCP: fastcgi_pass 127.0.0.1:9000;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+    }
+
+    # Seguridad: Bloquear acceso a archivos ocultos (.git, .env, etc.) y base de datos sqlite
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+
+    location ~ \.(sqlite|db)$ {
+        deny all;
+    }
+}

@@ -12,7 +12,12 @@ import {
   Cpu,
   Layers,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  HelpCircle,
+  Check,
+  FileCode,
+  Globe,
+  HardDrive
 } from 'lucide-react';
 
 export const SlimApiStatusTab: React.FC = () => {
@@ -78,7 +83,7 @@ export const SlimApiStatusTab: React.FC = () => {
               <Server className="w-7 h-7" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-mono tracking-wider uppercase text-yellow-400 font-bold">
                   Backend API RESTful
                 </span>
@@ -93,6 +98,10 @@ export const SlimApiStatusTab: React.FC = () => {
                     backendStatus === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
                   }`} />
                   {backendStatus === 'online' ? 'En Línea (Conectado)' : backendStatus === 'connecting' ? 'Conectando...' : 'Modo Offline'}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-900/60 text-blue-300 border border-blue-700/50">
+                  <CheckCircle2 className="w-3 h-3 text-blue-400" />
+                  Listo para Servidor PHP Puro (Sin Node.js)
                 </span>
               </div>
               <h2 className="text-xl font-bold text-white mt-1">
@@ -301,6 +310,127 @@ export const SlimApiStatusTab: React.FC = () => {
               Conexión PDO SQLite (`backend/data/ferreteria.sqlite`) con soporte para MySQL/PostgreSQL mediante variables de entorno `DB_HOST`, `DB_NAME`, `DB_USER`.
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* ZERO-NODEJS HOSTING COMPATIBILITY CARD & GUIDE */}
+      <div className="bg-gradient-to-br from-amber-500/10 via-stone-900 to-stone-950 border border-amber-500/30 rounded-2xl p-6 text-white shadow-sm space-y-6">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-amber-400 text-stone-950 rounded-2xl shrink-0 font-bold">
+            <HelpCircle className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400/20 text-yellow-300 border border-yellow-400/30 uppercase tracking-wider">
+              Pregunta Frecuente
+            </div>
+            <h3 className="text-lg font-bold text-white">
+              ¿Puedo usar la aplicación si mi servidor de hosting NO permite Node.js?
+            </h3>
+            <p className="text-sm text-stone-300 leading-relaxed">
+              <strong className="text-emerald-400 font-bold">SÍ, 100% SÍ.</strong> La aplicación está diseñada para funcionar en servidores compartidos estándar (como <span className="text-white font-semibold">cPanel, Apache, Nginx, Hostinger, Siteground o GoDaddy</span>) que solo tienen PHP instalado.
+            </p>
+          </div>
+        </div>
+
+        {/* Comparison grid: Dev vs Production Server */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="bg-stone-900/90 rounded-xl p-4 border border-stone-800 space-y-2">
+            <div className="flex items-center gap-2 text-stone-400 font-bold uppercase tracking-wider">
+              <HardDrive className="w-4 h-4 text-stone-400" />
+              <span>1. En tu Computadora de Desarrollo</span>
+            </div>
+            <p className="text-stone-300">
+              Solo necesitas Node.js en tu laptop/PC para ejecutar la orden de empaquetado:
+            </p>
+            <div className="bg-stone-950 px-3 py-2 rounded-lg font-mono text-yellow-400 border border-stone-800">
+              npm run build
+            </div>
+            <p className="text-stone-400 text-[11px]">
+              Esto compila el frontend de React a archivos estáticos puros (HTML, JS, CSS) y los deposita automáticamente dentro de <code className="text-amber-300">backend/public/</code>.
+            </p>
+          </div>
+
+          <div className="bg-emerald-950/40 rounded-xl p-4 border border-emerald-700/40 space-y-2">
+            <div className="flex items-center gap-2 text-emerald-400 font-bold uppercase tracking-wider">
+              <Globe className="w-4 h-4 text-emerald-400" />
+              <span>2. En tu Servidor de Producción (Hosting)</span>
+            </div>
+            <p className="text-stone-300">
+              En tu servidor <strong className="text-white">NO se instala Node.js</strong>. Solo necesitas:
+            </p>
+            <ul className="space-y-1 text-stone-300">
+              <li className="flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>PHP 7.4, 8.0, 8.1, 8.2 o 8.3 con extensión PDO (SQLite o MySQL).</span>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>Servidor web Apache (con mod_rewrite) o Nginx.</span>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>Cero procesos Node.js ni servicios en segundo plano.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Step-by-Step Deployment Instructions */}
+        <div className="bg-stone-900/80 rounded-xl p-5 border border-stone-800 space-y-3">
+          <h4 className="text-xs font-bold text-yellow-400 uppercase tracking-wider flex items-center gap-1.5">
+            <FileCode className="w-4 h-4" />
+            <span>Pasos para subir a tu Hosting (cPanel / Apache / Nginx)</span>
+          </h4>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+            <div className="p-3 bg-stone-950/80 rounded-lg border border-stone-800 space-y-1">
+              <span className="font-bold text-yellow-400 font-mono">Paso 1</span>
+              <p className="font-semibold text-white">Compilar Frontend</p>
+              <p className="text-[11px] text-stone-400">
+                Ejecuta <code className="text-stone-300">npm run build</code>. Vite empaqueta la app y el script sincroniza los assets en <code className="text-stone-300">backend/public/</code>.
+              </p>
+            </div>
+
+            <div className="p-3 bg-stone-950/80 rounded-lg border border-stone-800 space-y-1">
+              <span className="font-bold text-yellow-400 font-mono">Paso 2</span>
+              <p className="font-semibold text-white">Subir la Carpeta Backend</p>
+              <p className="text-[11px] text-stone-400">
+                Sube la carpeta <code className="text-stone-300">backend/</code> a tu hosting vía FTP o el Administrador de Archivos de cPanel.
+              </p>
+            </div>
+
+            <div className="p-3 bg-stone-950/80 rounded-lg border border-stone-800 space-y-1">
+              <span className="font-bold text-yellow-400 font-mono">Paso 3</span>
+              <p className="font-semibold text-white">Apuntar el Dominio</p>
+              <p className="text-[11px] text-stone-400">
+                Configura la raíz de tu dominio (DocumentRoot) hacia la carpeta <code className="text-stone-300">backend/public/</code> (o sube su contenido a <code className="text-stone-300">public_html</code>).
+              </p>
+            </div>
+
+            <div className="p-3 bg-stone-950/80 rounded-lg border border-stone-800 space-y-1">
+              <span className="font-bold text-yellow-400 font-mono">Paso 4</span>
+              <p className="font-semibold text-white">¡Listo para Usar!</p>
+              <p className="text-[11px] text-stone-400">
+                El archivo <code className="text-stone-300">.htaccess</code> incluido enruta la app SPA y todas las peticiones a la API Slim PHP sin requerir Node.js.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Included Files Checklist */}
+        <div className="border-t border-stone-800 pt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-stone-400">
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className="text-white font-semibold flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Archivos de soporte incluidos:</span>
+            </span>
+            <span className="bg-stone-800 px-2 py-0.5 rounded font-mono text-stone-200">backend/public/.htaccess</span>
+            <span className="bg-stone-800 px-2 py-0.5 rounded font-mono text-stone-200">backend/nginx.conf.example</span>
+            <span className="bg-stone-800 px-2 py-0.5 rounded font-mono text-stone-200">backend/public/index.php</span>
+          </div>
+          <span className="text-[11px] text-emerald-400 font-semibold">
+            Listo para producción
+          </span>
         </div>
       </div>
     </div>
