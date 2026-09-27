@@ -1,0 +1,19 @@
+{
+  "name": "almacenes/ferreteria-slim-api",
+  "description": "Backend API RESTful con Slim PHP para Ferretería Almacenes Nor Oriente",
+  "type": "project",
+  "require": {
+    "php": ">=8.1",
+    "slim/slim": "^4.14",
+    "slim/psr7": "^1.7"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  }
+}
