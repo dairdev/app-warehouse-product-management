@@ -1,0 +1,11 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/$USER/public_html/tienda
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -R backend/public/* $DEPLOYPATH/
+    - /bin/cp -R backend/src $DEPLOYPATH/
+    - /bin/cp -R backend/vendor $DEPLOYPATH/
+    - /bin/mkdir -p $DEPLOYPATH/data
+    - if [ ! -f $DEPLOYPATH/data/ferreteria.sqlite ] && [ -f backend/data/ferreteria.sqlite ]; then /bin/cp backend/data/ferreteria.sqlite $DEPLOYPATH/data/; fi
+    - /bin/chmod -R 775 $DEPLOYPATH/data

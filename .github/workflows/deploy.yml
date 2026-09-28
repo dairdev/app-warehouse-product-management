@@ -1,0 +1,130 @@
+name: Build & Deploy to Subdomain (/public_html/tienda)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: Build Frontend & Deploy to /public_html/tienda
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # Step 1: Set up Node.js and build Vite React frontend
+      # -----------------------------------------------------------------------
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Node Dependencies
+        run: npm ci || npm install
+
+      - name: Compile Frontend SPA into backend/public/
+        run: npm run build
+
+      # -----------------------------------------------------------------------
+      # Step 2: Set up PHP and install Slim Framework production dependencies
+      # -----------------------------------------------------------------------
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, sqlite3, pdo_sqlite, curl
+
+      - name: Install Composer Dependencies (Production)
+        working-directory: ./backend
+        run: |
+          if [ -f composer.json ]; then
+            composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+          fi
+
+      # -----------------------------------------------------------------------
+      # Step 3: Prepare complete deployment package for /public_html/tienda
+      # -----------------------------------------------------------------------
+      - name: Prepare Deployment Package for Subdomain (/public_html/tienda)
+        run: |
+          mkdir -p dist_tienda
+          # 1. Copiar archivos públicos (index.php, index.html, .htaccess, assets/)
+          cp -R backend/public/* dist_tienda/
+          
+          # 2. Copiar código backend Slim PHP y dependencias
+          cp -R backend/src dist_tienda/src
+          cp -R backend/vendor dist_tienda/vendor
+          
+          # 3. Preparar carpeta de datos SQLite segura con .htaccess
+          mkdir -p dist_tienda/data
+          if [ -f backend/data/.htaccess ]; then
+            cp backend/data/.htaccess dist_tienda/data/
+          fi
+          if [ -f backend/data/ferreteria.sqlite ]; then
+            cp backend/data/ferreteria.sqlite dist_tienda/data/
+          fi
+          
+          # 4. Asegurar que .htaccess esté en la raíz del subdominio
+          if [ -f backend/public/.htaccess ]; then
+            cp backend/public/.htaccess dist_tienda/.htaccess
+          fi
+          
+          echo "Package prepared successfully for destination: /public_html/tienda"
+          ls -la dist_tienda/
+
+      # -----------------------------------------------------------------------
+      # Step 4: Guardar artefacto descargable en GitHub Actions
+      # -----------------------------------------------------------------------
+      - name: Upload Production Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: subdomain-tienda-package
+          path: dist_tienda/
+          retention-days: 7
+
+      # -----------------------------------------------------------------------
+      # Step 5A: Despliegue automático vía FTP a /public_html/tienda
+      # Para activarlo: Agrega los secretos en GitHub:
+      # Settings > Secrets and variables > Actions:
+      # - FTP_SERVER (ej. ftp.tudominio.com o la IP de tu hosting)
+      # - FTP_USERNAME (tu usuario de cPanel o cuenta FTP)
+      # - FTP_PASSWORD (tu contraseña FTP)
+      # -----------------------------------------------------------------------
+      - name: Deploy via FTP to /public_html/tienda
+        if: ${{ env.FTP_SERVER != '' }}
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          local-dir: ./dist_tienda/
+          server-dir: public_html/tienda/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            data/*.sqlite-journal
+
+      # -----------------------------------------------------------------------
+      # Step 5B: Despliegue alternativo vía SSH / Rsync a /public_html/tienda
+      # Para activarlo si usas acceso SSH en cPanel/VPS:
+      # Configura SSH_HOST, SSH_USER, SSH_KEY en GitHub Secrets
+      # -----------------------------------------------------------------------
+      - name: Deploy via SSH / Rsync to /public_html/tienda
+        if: ${{ env.SSH_HOST != '' }}
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_USER: ${{ secrets.SSH_USER }}
+          TARGET: ${{ secrets.SSH_TARGET_PATH || 'public_html/tienda' }}
+          SOURCE: "dist_tienda/"
+          EXCLUDE: "/data/*.sqlite-journal, /.git/"

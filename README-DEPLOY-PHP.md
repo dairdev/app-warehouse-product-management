@@ -80,6 +80,44 @@ Si usas un servidor Linux con Nginx en lugar de Apache:
 
 ---
 
+## Integración con GitHub (Despliegue Automático para Subdominio en `/public_html/tienda`)
+
+Tu setup está configurado para desplegar hacia la carpeta **`/public_html/tienda`** correspondiente al subdominio (por ejemplo `tienda.tudominio.com`):
+
+### 1. Opción A: GitHub Actions (Automatizado en `.github/workflows/deploy.yml`)
+1. Cada vez que hagas `git push` a `main`, GitHub compila el frontend con Node.js y descarga las dependencias de Slim PHP con Composer.
+2. La acción empaqueta la versión lista para producción en `dist_tienda` y la envía a **`/public_html/tienda/`**.
+3. **Para activar el envío automático por FTP a tu hosting**:
+   - En tu repositorio de GitHub ve a **Settings** > **Secrets and variables** > **Actions**.
+   - Añade los siguientes 3 secretos:
+     - `FTP_SERVER`: Tu servidor o IP (ej. `ftp.tudominio.com` o la IP de tu cPanel).
+     - `FTP_USERNAME`: Tu usuario de cPanel o de la cuenta FTP asignada a `/public_html/tienda`.
+     - `FTP_PASSWORD`: Tu contraseña FTP.
+4. El workflow desplegará automáticamente los archivos en `/public_html/tienda/` preservando la base de datos y sin sobreescribir datos vivos.
+
+### 2. Opción B: Módulo Git de cPanel (`.cpanel.yml`)
+Si prefieres usar la herramienta **Control de Versiones Git** de cPanel:
+1. Hemos configurado `.cpanel.yml` con la ruta de destino:
+   `export DEPLOYPATH=/home/$USER/public_html/tienda`
+2. En tu cPanel ve a **Git Version Control** > Clona o vincula el repositorio de GitHub.
+3. Al pulsar **Deploy HEAD Commit** (o recibir el webhook de GitHub), cPanel copiará automáticamente el frontend y la API directamente a `/public_html/tienda/`.
+
+### Estructura desplegada en `/public_html/tienda/`:
+```text
+/public_html/tienda/
+├── index.html          <-- React SPA compilado
+├── index.php           <-- Enrutador Slim PHP 4 (API RESTful + Fallback SPA)
+├── .htaccess           <-- Reglas Apache, caché Gzip y protección de datos
+├── assets/             <-- Archivos JS, CSS, fuentes e imágenes
+├── src/                <-- Controladores y modelos PHP (protegido contra acceso directo)
+├── vendor/             <-- Dependencias de Slim Framework
+└── data/
+    ├── .htaccess       <-- Bloquea descarga directa del archivo sqlite
+    └── ferreteria.sqlite <-- Base de datos persistente SQLite
+```
+
+---
+
 ## Resumen
-- **En tu computadora:** Se usa Node.js solo para `npm run build`.
+- **En tu computadora o en GitHub Actions:** Se compila el proyecto (`npm run build`).
 - **En tu servidor:** **0% Node.js**. Solo se necesita PHP y tu servidor web (Apache o Nginx).

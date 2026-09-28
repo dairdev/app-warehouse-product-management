@@ -8,7 +8,29 @@ use PDOException;
 class Database
 {
     private static ?PDO $instance = null;
-    private static string $dbFile = __DIR__ . '/../../data/ferreteria.sqlite';
+
+    public static function getDatabaseFile(): string
+    {
+        $envPath = getenv('DB_PATH');
+        if ($envPath) {
+            return $envPath;
+        }
+
+        $candidates = [
+            __DIR__ . '/../../data/ferreteria.sqlite',
+            __DIR__ . '/../data/ferreteria.sqlite',
+            dirname(__DIR__, 2) . '/data/ferreteria.sqlite',
+            dirname(__DIR__) . '/data/ferreteria.sqlite',
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (file_exists($candidate) || is_dir(dirname($candidate))) {
+                return $candidate;
+            }
+        }
+
+        return __DIR__ . '/../../data/ferreteria.sqlite';
+    }
 
     public static function getConnection(): PDO
     {
@@ -27,11 +49,12 @@ class Database
                 ]);
             } else {
                 // SQLite connection
-                $dbDir = dirname(self::$dbFile);
+                $dbFile = self::getDatabaseFile();
+                $dbDir = dirname($dbFile);
                 if (!is_dir($dbDir)) {
                     mkdir($dbDir, 0777, true);
                 }
-                $dsn = "sqlite:" . self::$dbFile;
+                $dsn = "sqlite:" . $dbFile;
                 self::$instance = new PDO($dsn, null, null, [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,

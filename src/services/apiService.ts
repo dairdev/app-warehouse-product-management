@@ -1,6 +1,13 @@
 import { Category, Brand, Product, User, StoreSettings, Tag } from '../types';
 
-const API_BASE = '/api';
+function getApiBase(): string {
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/tienda')) {
+    return '/tienda/api';
+  }
+  return '/api';
+}
+
+const API_BASE = getApiBase();
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {

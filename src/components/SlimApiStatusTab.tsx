@@ -17,7 +17,10 @@ import {
   Check,
   FileCode,
   Globe,
-  HardDrive
+  HardDrive,
+  GitBranch,
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 
 export const SlimApiStatusTab: React.FC = () => {
@@ -425,12 +428,89 @@ export const SlimApiStatusTab: React.FC = () => {
               <span>Archivos de soporte incluidos:</span>
             </span>
             <span className="bg-stone-800 px-2 py-0.5 rounded font-mono text-stone-200">backend/public/.htaccess</span>
+            <span className="bg-stone-800 px-2 py-0.5 rounded font-mono text-stone-200">.github/workflows/deploy.yml</span>
+            <span className="bg-stone-800 px-2 py-0.5 rounded font-mono text-stone-200">.cpanel.yml</span>
             <span className="bg-stone-800 px-2 py-0.5 rounded font-mono text-stone-200">backend/nginx.conf.example</span>
-            <span className="bg-stone-800 px-2 py-0.5 rounded font-mono text-stone-200">backend/public/index.php</span>
           </div>
           <span className="text-[11px] text-emerald-400 font-semibold">
             Listo para producción
           </span>
+        </div>
+      </div>
+
+      {/* GITHUB INTEGRATION ADVANTAGE CARD */}
+      <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs space-y-6">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-stone-900 text-yellow-400 rounded-2xl shrink-0">
+            <GitBranch className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-stone-100 text-stone-800 border border-stone-200 mb-1">
+              <Sparkles className="w-3 h-3 text-amber-500" />
+              <span>Integración con GitHub Activa</span>
+            </div>
+            <h3 className="text-lg font-bold text-stone-900">
+              ¿Cómo aprovechar la integración con GitHub si tu hosting no tiene Node.js?
+            </h3>
+            <p className="text-xs text-stone-600 leading-relaxed mt-1">
+              Tener integración con GitHub en tu hosting te da una ventaja enorme: <strong>puedes dejar que los servidores de GitHub compilen el frontend por ti</strong> y envíen únicamente los archivos listos para correr en tu servidor PHP puro, eliminando por completo la necesidad de compilar manualmente o tener Node.js en tu hosting.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          {/* Workflow 1: GitHub Actions CI/CD */}
+          <div className="border border-stone-200 rounded-xl p-4.5 bg-stone-50/70 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-stone-900 text-sm flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Opción 1: GitHub Actions (Destino: /public_html/tienda)
+              </span>
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                Configurado
+              </span>
+            </div>
+            <p className="text-stone-600 text-[11px]">
+              Actualizado en <code className="bg-white px-1.5 py-0.5 rounded border border-stone-300 font-mono">.github/workflows/deploy.yml</code> para tu subdominio.
+            </p>
+            <ol className="space-y-1.5 text-stone-700 text-[11px] list-decimal list-inside">
+              <li>Haces un cambio en tu código y ejecutas <code className="text-stone-900 font-semibold font-mono">git push</code> a GitHub.</li>
+              <li>GitHub compila el frontend, instala las dependencias de Slim PHP y arma el paquete en <code className="text-stone-900 font-mono">dist_tienda</code>.</li>
+              <li>GitHub envía los archivos automáticamente a la carpeta de tu subdominio <strong className="text-stone-900 font-mono">/public_html/tienda/</strong>.</li>
+              <li>Tu subdominio queda actualizado en segundos sin sobreescribir la base de datos de productos.</li>
+            </ol>
+          </div>
+
+          {/* Workflow 2: cPanel Git Deployment */}
+          <div className="border border-stone-200 rounded-xl p-4.5 bg-stone-50/70 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-stone-900 text-sm flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                Opción 2: Git Version Control (cPanel .cpanel.yml)
+              </span>
+              <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                Directo en cPanel
+              </span>
+            </div>
+            <p className="text-stone-600 text-[11px]">
+              Configurado en <code className="bg-white px-1.5 py-0.5 rounded border border-stone-300 font-mono">.cpanel.yml</code> apuntando a <code className="bg-white px-1.5 py-0.5 rounded border border-stone-300 font-mono">/home/$USER/public_html/tienda</code>.
+            </p>
+            <ol className="space-y-1.5 text-stone-700 text-[11px] list-decimal list-inside">
+              <li>En cPanel vas a <strong>Control de Versiones Git</strong> y vinculas el repositorio.</li>
+              <li>Al pulsar "Deploy" o recibir el Webhook, cPanel copia los archivos automáticamente a <code className="text-stone-900 font-mono">public_html/tienda/</code>.</li>
+              <li>Las dependencias de Slim y las reglas de Apache quedan enlazadas de inmediato para el subdominio.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-4 text-xs text-amber-900 space-y-1">
+          <strong className="font-bold flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-amber-600" />
+            Beneficio Principal
+          </strong>
+          <p className="text-amber-800 text-[11px]">
+            No necesitas instalar Node.js ni Composer en tu servidor de producción: el control de versiones y la compilación ocurren en la nube de GitHub o en tu equipo, y tu hosting solo se encarga de servir el código PHP optimizado y los archivos estáticos de alta velocidad.
+          </p>
         </div>
       </div>
     </div>

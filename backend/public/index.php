@@ -16,7 +16,31 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
 use Slim\Routing\RouteCollectorProxy;
 
-require __DIR__ . '/../vendor/autoload.php';
+$autoloadFiles = [
+    __DIR__ . '/vendor/autoload.php',
+    __DIR__ . '/../vendor/autoload.php',
+    dirname(__DIR__) . '/vendor/autoload.php',
+];
+
+$autoloadLoaded = false;
+foreach ($autoloadFiles as $file) {
+    if (file_exists($file)) {
+        require $file;
+        $autoloadLoaded = true;
+        break;
+    }
+}
+
+if (!$autoloadLoaded) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'error' => 'Dependency Error',
+        'message' => 'No se encontró el autoloader de Composer (vendor/autoload.php).',
+        'tip' => 'Asegúrese de subir la carpeta vendor/ o ejecutar "composer install".'
+    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    exit;
+}
 
 $app = AppFactory::create();
 
@@ -128,8 +152,9 @@ $registerApiRoutes = function (RouteCollectorProxy $group): void {
     $group->post('/tags', [TagController::class, 'create']);
 };
 
-// Mount routes under /api and also root for proxy compatibility
+// Mount routes under /api, /tienda/api, and also root for proxy compatibility
 $app->group('/api', $registerApiRoutes);
+$app->group('/tienda/api', $registerApiRoutes);
 $app->group('', $registerApiRoutes);
 
 // SPA Fallback Route: Any non-API frontend route (e.g. /catalogo, /admin) is served with index.html

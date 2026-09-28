@@ -1,6 +1,5 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /
 
     # Security: Disable directory browsing
     Options -Indexes
@@ -14,8 +13,20 @@
     RewriteRule ^ - [L]
 
     # For any route that is NOT a real file or directory, redirect to index.php
+    # Works seamlessly in root subdomain (tienda.example.com) or subfolder (/tienda)
     RewriteRule ^ index.php [QSA,L]
 </IfModule>
+
+# Security: Deny direct HTTP access to database files, configs, and lockfiles
+<FilesMatch "\.(sqlite|sqlite3|db|env|lock|md|yml|yaml|ini|log|sh)$">
+    <IfModule authz_core_module>
+        Require all denied
+    </IfModule>
+    <IfModule !authz_core_module>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
 
 # Optional GZIP Compression for fast asset loading on Apache
 <IfModule mod_deflate.c>
