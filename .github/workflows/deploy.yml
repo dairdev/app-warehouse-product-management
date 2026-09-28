@@ -45,39 +45,33 @@ jobs:
           fi
 
       # -----------------------------------------------------------------------
-      # Step 3: Prepare deployment packages (Frontend SPA + Backend PHP separated)
+      # Step 3: Prepare complete deployment package for /public_html/tienda
       # -----------------------------------------------------------------------
-      - name: Prepare Deployment Packages
+      - name: Prepare Unified Deployment Package
         run: |
-          # 1. Paquete Frontend SPA (HTML, JS, CSS, Favicons y Assets compilados de Vite)
-          mkdir -p dist_tienda_frontend/assets
-          cp backend/public/index.html dist_tienda_frontend/index.html
-          cp -r backend/public/assets/* dist_tienda_frontend/assets/
-          if [ -f backend/public/favicon.svg ]; then cp backend/public/favicon.svg dist_tienda_frontend/; fi
-          if [ -f backend/public/favicon.ico ]; then cp backend/public/favicon.ico dist_tienda_frontend/; fi
+          mkdir -p dist_tienda/assets
+          mkdir -p dist_tienda/src
+          mkdir -p dist_tienda/data
 
-          # 2. Paquete Backend PHP (Slim 4 API, .htaccess, controladores y SQLite)
-          mkdir -p dist_tienda_backend/src
-          cp backend/public/index.php dist_tienda_backend/index.php
-          if [ -f backend/public/.htaccess ]; then cp backend/public/.htaccess dist_tienda_backend/.htaccess; fi
-          cp -r backend/src/* dist_tienda_backend/src/
-          
-          mkdir -p dist_tienda_backend/data
-          if [ -f backend/data/.htaccess ]; then cp backend/data/.htaccess dist_tienda_backend/data/; fi
-          if [ -f backend/data/ferreteria.sqlite ]; then cp backend/data/ferreteria.sqlite dist_tienda_backend/data/; fi
-          if [ -f backend/composer.json ]; then cp backend/composer.json dist_tienda_backend/; fi
+          # 1. Copiar Frontend SPA (HTML, JS, CSS y Favicons compilados)
+          cp backend/public/index.html dist_tienda/index.html
+          cp -r backend/public/assets/* dist_tienda/assets/
+          if [ -f backend/public/favicon.svg ]; then cp backend/public/favicon.svg dist_tienda/; fi
+          if [ -f backend/public/favicon.ico ]; then cp backend/public/favicon.ico dist_tienda/; fi
 
-          # 3. Paquete Completo consolidado para descarga de artefacto GitHub
-          mkdir -p dist_tienda
-          cp -R dist_tienda_frontend/* dist_tienda/
-          cp -R dist_tienda_backend/* dist_tienda/
-          if [ -d backend/vendor ]; then
-            cp -R backend/vendor dist_tienda/vendor
-          fi
+          # 2. Copiar Backend Slim PHP (index.php, .htaccess, controladores y rutas)
+          cp backend/public/index.php dist_tienda/index.php
+          if [ -f backend/public/.htaccess ]; then cp backend/public/.htaccess dist_tienda/.htaccess; fi
+          cp -r backend/src/* dist_tienda/src/
 
-          echo "Deployment packages prepared successfully!"
-          echo "Frontend files:" && ls -la dist_tienda_frontend/
-          echo "Backend files:" && ls -la dist_tienda_backend/
+          # 3. Copiar configuración de datos segura
+          if [ -f backend/data/.htaccess ]; then cp backend/data/.htaccess dist_tienda/data/; fi
+          if [ -f backend/data/ferreteria.sqlite ]; then cp backend/data/ferreteria.sqlite dist_tienda/data/; fi
+          if [ -f backend/composer.json ]; then cp backend/composer.json dist_tienda/; fi
+
+          echo "Unified deployment package prepared successfully!"
+          ls -la dist_tienda/
+          ls -la dist_tienda/assets/
 
       # -----------------------------------------------------------------------
       # Step 4: Guardar artefacto consolidado en GitHub Actions (Descargable)
@@ -90,10 +84,11 @@ jobs:
           retention-days: 7
 
       # -----------------------------------------------------------------------
-      # Step 5A: Despliegue FTP Paso 1 - Frontend SPA (JS, CSS, HTML, Favicons)
-      # Sube rápidamente los bundles estáticos de React sin saturar el socket
+      # Step 5: Despliegue Unificado vía FTP a /public_html/tienda
+      # Sube atómicamente el Frontend (JS/CSS/HTML) y el Backend (PHP) juntos
+      # en una sola sesión sincronizada para evitar que se borren entre sí.
       # -----------------------------------------------------------------------
-      - name: Deploy Frontend Assets via FTP
+      - name: Deploy Complete App (Frontend + Slim PHP) via FTP
         if: ${{ env.FTP_SERVER != '' }}
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
@@ -104,30 +99,10 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           port: 21
-          local-dir: ./dist_tienda_frontend/
+          local-dir: ./dist_tienda/
           server-dir: public_html/tienda/
           security: loose
-          timeout: 180000
-
-      # -----------------------------------------------------------------------
-      # Step 5B: Despliegue FTP Paso 2 - Backend Slim PHP (index.php, .htaccess, src/)
-      # Sube la lógica de la API PHP y rutas de forma limpia e independiente
-      # -----------------------------------------------------------------------
-      - name: Deploy Backend PHP via FTP
-        if: ${{ env.FTP_SERVER != '' }}
-        env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./dist_tienda_backend/
-          server-dir: public_html/tienda/
-          security: loose
-          timeout: 180000
+          timeout: 300000
           exclude: |
             **/.git*
             **/.git*/**

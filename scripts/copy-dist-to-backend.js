@@ -7,6 +7,12 @@ const backendPublicDir = path.resolve(process.cwd(), 'backend/public');
 if (fs.existsSync(distDir)) {
   console.log('[build-sync] Copying compiled Vite static assets from dist/ to backend/public/ for zero-Node.js PHP hosting...');
   
+  // Clean old assets folder in backend/public to avoid accumulating stale hashed bundles
+  const backendAssetsDir = path.join(backendPublicDir, 'assets');
+  if (fs.existsSync(backendAssetsDir)) {
+    fs.rmSync(backendAssetsDir, { recursive: true, force: true });
+  }
+
   // Recursively copy dist to backend/public
   function copyRecursive(src, dest) {
     if (!fs.existsSync(dest)) {
