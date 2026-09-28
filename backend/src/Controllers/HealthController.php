@@ -72,6 +72,16 @@ class HealthController extends BaseController
                     'GET /api/tags',
                     'POST /api/tags',
                 ],
+                'upload' => [
+                    'POST /api/upload',
+                    'DELETE /api/upload/{filename}',
+                ],
+            ],
+            'storage' => [
+                'uploads_directory' => is_dir(__DIR__ . '/../../public/uploads') ? 'ready' : 'created_on_demand',
+                'writable' => is_writable(__DIR__ . '/../../public/uploads'),
+                'max_file_size_mb' => 25,
+                'allowed_types' => ['images (jpg, png, webp, gif, svg)', 'videos (mp4, webm)', 'documents (pdf)'],
             ],
         ]);
     }

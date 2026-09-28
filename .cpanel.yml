@@ -9,3 +9,5 @@ deployment:
     - /bin/mkdir -p $DEPLOYPATH/data
     - if [ ! -f $DEPLOYPATH/data/ferreteria.sqlite ] && [ -f backend/data/ferreteria.sqlite ]; then /bin/cp backend/data/ferreteria.sqlite $DEPLOYPATH/data/; fi
     - /bin/chmod -R 775 $DEPLOYPATH/data
+    - /bin/mkdir -p $DEPLOYPATH/uploads
+    - /bin/chmod -R 775 $DEPLOYPATH/uploads

@@ -15,6 +15,7 @@ import {
   Package,
 } from 'lucide-react';
 import { formatCurrency, getQuoteWhatsAppUrl, STORE_INFO } from '../utils/shareUtils';
+import { getMediaUrl } from '../utils/mediaUtils';
 
 interface ClientProfileViewProps {
   onBackToCatalog: () => void;
@@ -308,7 +309,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = ({
                       <div className="flex items-center gap-3.5 min-w-0">
                         {prod.media && prod.media[0] ? (
                           <img
-                            src={prod.media[0].url}
+                            src={getMediaUrl(prod.media[0].url)}
                             alt={prod.name}
                             referrerPolicy="no-referrer"
                             className="w-16 h-16 rounded-xl object-cover border border-stone-100 shrink-0"

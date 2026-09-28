@@ -1,0 +1,36 @@
+# Disable directory browsing
+Options -Indexes -ExecCGI
+
+# Prevent PHP script execution in uploads directory for maximum security
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|phps|cgi|pl|exe|sh|py|rb|asp|aspx)$">
+    <IfModule authz_core_module>
+        Require all denied
+    </IfModule>
+    <IfModule !authz_core_module>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Allow direct public access to images, media and documents
+<FilesMatch "\.(jpg|jpeg|png|webp|gif|svg|ico|bmp|avif|mp4|webm|ogg|mov|pdf)$">
+    <IfModule authz_core_module>
+        Require all granted
+    </IfModule>
+    <IfModule !authz_core_module>
+        Order allow,deny
+        Allow from all
+    </IfModule>
+</FilesMatch>
+
+# Cache headers for uploaded media
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType video/mp4 "access plus 1 month"
+    ExpiresByType video/webm "access plus 1 month"
+</IfModule>

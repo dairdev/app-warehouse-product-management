@@ -8,6 +8,7 @@ use App\Controllers\HealthController;
 use App\Controllers\ProductController;
 use App\Controllers\SettingsController;
 use App\Controllers\TagController;
+use App\Controllers\UploadController;
 use App\Controllers\UserController;
 use App\Middleware\CorsMiddleware;
 use App\Middleware\JsonBodyParserMiddleware;
@@ -85,6 +86,39 @@ $app->get('/assets/{file:.+}', function (Request $request, Response $response, a
     }
     return $response->withStatus(404);
 });
+
+// Serve uploaded user files from /uploads/ if requested through PHP (fallback for Apache / LiteSpeed)
+$serveUploadedFile = function (Request $request, Response $response, array $args): Response {
+    $filename = basename($args['file']);
+    $filePath = __DIR__ . '/uploads/' . $filename;
+    if (file_exists($filePath) && is_file($filePath)) {
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mimeTypes = [
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',
+            'webp' => 'image/webp',
+            'gif'  => 'image/gif',
+            'svg'  => 'image/svg+xml',
+            'bmp'  => 'image/bmp',
+            'avif' => 'image/avif',
+            'mp4'  => 'video/mp4',
+            'webm' => 'video/webm',
+            'ogg'  => 'video/ogg',
+            'mov'  => 'video/quicktime',
+            'pdf'  => 'application/pdf',
+        ];
+        $contentType = $mimeTypes[$ext] ?? 'application/octet-stream';
+        $response->getBody()->write((string) file_get_contents($filePath));
+        return $response
+            ->withHeader('Content-Type', $contentType)
+            ->withHeader('Cache-Control', 'public, max-age=604800');
+    }
+    return $response->withStatus(404);
+};
+
+$app->get('/uploads/{file:.+}', $serveUploadedFile);
+$app->get('/tienda/uploads/{file:.+}', $serveUploadedFile);
 
 // Serve favicon SVG / ICO if requested through PHP
 $serveFavicon = function (Request $request, Response $response, string $filename): Response {
@@ -169,6 +203,10 @@ $registerApiRoutes = function (RouteCollectorProxy $group): void {
     // Tags
     $group->get('/tags', [TagController::class, 'list']);
     $group->post('/tags', [TagController::class, 'create']);
+
+    // File / Media Uploads (Slim PHP Multipart)
+    $group->post('/upload', [UploadController::class, 'upload']);
+    $group->delete('/upload/{filename}', [UploadController::class, 'delete']);
 };
 
 // Mount routes under /api, /tienda/api, and also root for proxy compatibility

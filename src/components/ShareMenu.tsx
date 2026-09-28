@@ -9,6 +9,7 @@ import {
   formatCurrency,
 } from '../utils/shareUtils';
 import { downloadProductPdf } from '../utils/pdfExport';
+import { getMediaUrl } from '../utils/mediaUtils';
 import {
   X,
   Share2,
@@ -97,7 +98,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ product, onClose }) => {
           <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 flex items-start gap-3">
             {product.media && product.media[0] ? (
               <img
-                src={product.media[0].url}
+                src={getMediaUrl(product.media[0].url)}
                 alt={product.name}
                 referrerPolicy="no-referrer"
                 className="w-12 h-12 object-cover rounded-lg shrink-0 border border-stone-200"

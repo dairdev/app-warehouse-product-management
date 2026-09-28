@@ -176,4 +176,82 @@ export const apiService = {
     const res = await fetchJson<{ success: boolean; data: Tag[] }>(`${API_BASE}/tags`);
     return res.data;
   },
+
+  // Media & File Uploads (Slim PHP / Server multipart)
+  async uploadFile(file: File): Promise<{
+    id: string;
+    url: string;
+    filename: string;
+    originalName: string;
+    size: number;
+    type: 'image' | 'video' | 'document';
+    mimeType: string;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || `Error al subir archivo (${res.status})`);
+    }
+
+    return data.data;
+  },
+
+  async uploadFiles(files: File[]): Promise<Array<{
+    id: string;
+    url: string;
+    filename: string;
+    originalName: string;
+    size: number;
+    type: 'image' | 'video' | 'document';
+    mimeType: string;
+  }>> {
+    if (files.length === 0) return [];
+
+    const formData = new FormData();
+    files.forEach((f) => formData.append('files[]', f));
+
+    const res = await fetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || `Error al subir archivos (${res.status})`);
+    }
+
+    // Handles either data as array or items array
+    if (Array.isArray(data.data)) {
+      return data.data;
+    }
+    if (Array.isArray(data.items)) {
+      return data.items;
+    }
+    return [data.data];
+  },
+
+  async deleteUploadedFile(filename: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/upload/${encodeURIComponent(filename)}`, {
+        method: 'DELETE',
+        headers: { Accept: 'application/json' },
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
 };

@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import fs from 'fs';
+import multer from 'multer';
 import {
   INITIAL_BRANDS,
   INITIAL_CATEGORIES,
@@ -233,6 +234,82 @@ async function startServer() {
     currentTags.push(newTag);
     res.status(201).json(newTag);
   });
+
+  // -------------------------------------------------------------------------
+  // File Uploads (Parity with Slim PHP UploadController)
+  // -------------------------------------------------------------------------
+  const uploadDir = path.resolve(process.cwd(), 'backend/public/uploads');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  const storage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const rawName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30);
+      const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+      const randomHex = Math.random().toString(36).substring(2, 8);
+      cb(null, `prod_${timestamp}_${randomHex}_${rawName || 'archivo'}${ext}`);
+    },
+  });
+
+  const upload = multer({
+    storage,
+    limits: { fileSize: 25 * 1024 * 1024 },
+  });
+
+  apiRouter.post('/upload', upload.any(), (req, res) => {
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      return res.status(400).json({ success: false, error: 'No se envió ningún archivo' });
+    }
+
+    const isSubPath = req.baseUrl.startsWith('/tienda') || req.originalUrl.startsWith('/tienda');
+    const basePrefix = isSubPath ? '/tienda' : '';
+
+    const results = files.map((file) => {
+      const ext = path.extname(file.filename).toLowerCase();
+      const isVideo = ['.mp4', '.webm', '.ogg', '.mov'].includes(ext);
+      const isPdf = ext === '.pdf';
+      return {
+        id: `up-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        url: `${basePrefix}/uploads/${file.filename}`,
+        filename: file.filename,
+        originalName: file.originalname,
+        size: file.size,
+        type: isVideo ? 'video' : (isPdf ? 'document' : 'image'),
+        mimeType: file.mimetype,
+      };
+    });
+
+    const isSingle = results.length === 1;
+    res.status(201).json({
+      success: true,
+      message: `${results.length} archivo(s) subido(s) correctamente.`,
+      data: isSingle ? results[0] : results,
+      items: results,
+    });
+  });
+
+  apiRouter.delete('/upload/:filename', (req, res) => {
+    const filename = path.basename(req.params.filename);
+    const filePath = path.join(uploadDir, filename);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      return res.json({ success: true, message: 'Archivo eliminado' });
+    }
+    res.status(404).json({ success: false, error: 'Archivo no encontrado' });
+  });
+
+  // Serve uploaded files statically in Node dev
+  app.use('/uploads', express.static(uploadDir));
+  app.use('/tienda/uploads', express.static(uploadDir));
 
   // Mount API router under both /api and /tienda/api
   app.use('/api', apiRouter);

@@ -23,8 +23,8 @@ if (fs.existsSync(distDir)) {
       const srcPath = path.join(src, entry.name);
       const destPath = path.join(dest, entry.name);
       
-      // Never overwrite index.php or .htaccess
-      if (entry.name === 'index.php' || entry.name === '.htaccess') {
+      // Never overwrite index.php, .htaccess or uploads directory
+      if (entry.name === 'index.php' || entry.name === '.htaccess' || entry.name === 'uploads') {
         continue;
       }
       

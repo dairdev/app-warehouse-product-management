@@ -64,10 +64,15 @@ jobs:
           if [ -f backend/public/.htaccess ]; then cp backend/public/.htaccess dist_tienda/.htaccess; fi
           cp -r backend/src/* dist_tienda/src/
 
-          # 3. Copiar configuración de datos segura
+          # 3. Copiar configuración de datos segura y carpeta de uploads
           if [ -f backend/data/.htaccess ]; then cp backend/data/.htaccess dist_tienda/data/; fi
           if [ -f backend/data/ferreteria.sqlite ]; then cp backend/data/ferreteria.sqlite dist_tienda/data/; fi
           if [ -f backend/composer.json ]; then cp backend/composer.json dist_tienda/; fi
+
+          # 4. Carpeta de subida de imágenes/videos segura
+          mkdir -p dist_tienda/uploads
+          if [ -f backend/public/uploads/.htaccess ]; then cp backend/public/uploads/.htaccess dist_tienda/uploads/; fi
+          if [ -f backend/public/uploads/.gitkeep ]; then cp backend/public/uploads/.gitkeep dist_tienda/uploads/; fi
 
           echo "Unified deployment package prepared successfully!"
           ls -la dist_tienda/
@@ -109,5 +114,11 @@ jobs:
             **/.git*/**
             data/*.sqlite-journal
             **/vendor/**
+            uploads/prod_*
+            uploads/*.jpg
+            uploads/*.jpeg
+            uploads/*.png
+            uploads/*.webp
+            uploads/*.mp4
 
   

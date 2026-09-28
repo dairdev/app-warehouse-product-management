@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Product, ProductAttribute, ProductMedia, Brand } from '../types';
 import { useStore } from '../context/StoreContext';
+import { apiService } from '../services/apiService';
+import { getMediaUrl } from '../utils/mediaUtils';
 import {
   X,
   Plus,
@@ -13,6 +15,7 @@ import {
   Film,
   Layers,
   Check,
+  Loader2,
 } from 'lucide-react';
 
 interface ProductFormModalProps {
@@ -64,6 +67,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [mediaList, setMediaList] = useState<ProductMedia[]>(() => {
     return product?.media && product.media.length > 0 ? product.media : [];
   });
+
+  const [isUploading, setIsUploading] = useState(false);
 
   // Media input inputs
   const [newMediaUrl, setNewMediaUrl] = useState('');
@@ -165,34 +170,47 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     showToast(`Elemento ${newMediaType === 'video' ? 'de video' : 'fotográfico'} agregado`);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const isVideo = file.type.startsWith('video');
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const resultUrl = event.target?.result as string;
-        if (resultUrl) {
-          const newMedia: ProductMedia = {
-            id: 'med-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
-            type: isVideo ? 'video' : 'image',
-            url: resultUrl,
-            title: file.name,
-            sortOrder: mediaList.length + 1,
-          };
-          setMediaList((prev) => [...prev, newMedia]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-    showToast(`${files.length} archivo(s) cargado(s) a la galería`);
-    // Clear input
-    e.target.value = '';
+    const fileList = Array.from(files);
+    setIsUploading(true);
+    showToast(`Subiendo ${fileList.length} archivo(s) al servidor Slim PHP...`);
+
+    try {
+      const uploadedItems = await apiService.uploadFiles(fileList);
+      const newMediaItems: ProductMedia[] = uploadedItems.map((item, idx) => ({
+        id: item.id || `med-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+        type: item.type === 'video' ? 'video' : 'image',
+        url: item.url,
+        title: item.originalName || (item.type === 'video' ? 'Video demostrativo' : 'Foto de producto'),
+        sortOrder: mediaList.length + idx + 1,
+      }));
+
+      setMediaList((prev) => [...prev, ...newMediaItems]);
+      showToast(`${uploadedItems.length} archivo(s) guardado(s) exitosamente en el servidor`);
+    } catch (err: unknown) {
+      console.error('Error al subir archivos al servidor:', err);
+      const msg = err instanceof Error ? err.message : 'Error desconocido al subir archivos al servidor';
+      showToast(msg, 'error');
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
   };
 
   const handleRemoveMedia = (id: string) => {
+    const itemToRemove = mediaList.find((m) => m.id === id);
+    if (itemToRemove && itemToRemove.url.includes('/uploads/')) {
+      const parts = itemToRemove.url.split('/uploads/');
+      const filename = parts.pop();
+      if (filename) {
+        apiService.deleteUploadedFile(filename).catch((err) => {
+          console.warn('No se pudo eliminar el archivo del servidor:', err);
+        });
+      }
+    }
     setMediaList((prev) => prev.filter((m) => m.id !== id));
   };
 
@@ -512,12 +530,28 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
               {/* Upload Local Files Multiple */}
               <div className="pt-2 border-t border-stone-100 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 text-stone-900 rounded-lg font-semibold transition-colors">
-                  <Upload className="w-3.5 h-3.5 text-amber-800" />
-                  <span>Subir Múltiples Fotos o Videos Locales</span>
+                <label
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+                    isUploading
+                      ? 'bg-amber-100 text-stone-500 cursor-not-allowed'
+                      : 'cursor-pointer bg-yellow-100 hover:bg-yellow-200 text-stone-900'
+                  }`}
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 text-amber-800 animate-spin" />
+                      <span>Subiendo al servidor Slim PHP...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3.5 h-3.5 text-amber-800" />
+                      <span>Subir Fotos o Videos al Servidor</span>
+                    </>
+                  )}
                   <input
                     type="file"
                     multiple
+                    disabled={isUploading}
                     accept="image/*,video/*"
                     onChange={handleFileUpload}
                     className="hidden"
@@ -601,7 +635,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         </div>
                       ) : (
                         <img
-                          src={media.url}
+                          src={getMediaUrl(media.url)}
                           alt={media.title || 'Foto'}
                           referrerPolicy="no-referrer"
                           className="w-full h-full object-cover"

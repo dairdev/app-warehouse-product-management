@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, getProductWhatsAppUrl, STORE_INFO } from '../utils/shareUtils';
 import { downloadProductPdf } from '../utils/pdfExport';
+import { getMediaUrl } from '../utils/mediaUtils';
 
 interface ProductDetailViewProps {
   productId: string;
@@ -117,7 +118,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   currentMedia.type === 'video' ? (
                     currentMedia.url.startsWith('data:video') || currentMedia.url.endsWith('.mp4') ? (
                       <video
-                        src={currentMedia.url}
+                        src={getMediaUrl(currentMedia.url)}
                         controls
                         className="w-full h-full object-contain bg-black"
                       />
@@ -134,7 +135,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     )
                   ) : (
                     <img
-                      src={currentMedia.url}
+                      src={getMediaUrl(currentMedia.url)}
                       alt={product.name}
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover object-center"
@@ -171,7 +172,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                         </div>
                       ) : (
                         <img
-                          src={m.url}
+                          src={getMediaUrl(m.url)}
                           alt={m.title || ''}
                           referrerPolicy="no-referrer"
                           className="w-full h-full object-cover"

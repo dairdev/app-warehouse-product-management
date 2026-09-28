@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Product, Category } from '../types';
 import { useStore } from '../context/StoreContext';
 import { formatCurrency } from '../utils/shareUtils';
+import { getMediaUrl } from '../utils/mediaUtils';
 import { Share2, Bookmark, ArrowRight, Package } from 'lucide-react';
 
 interface ProductCardProps {
@@ -23,7 +24,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const [imageError, setImageError] = useState(false);
 
   const isTagged = isProductTaggedByClient(product.id);
-  const primaryImage = product.media && product.media.length > 0 ? product.media[0].url : null;
+  const primaryImage = product.media && product.media.length > 0 ? getMediaUrl(product.media[0].url) : null;
   const mediaCount = product.media ? product.media.length : 0;
 
   // Key attributes for fast technical reference
