@@ -101,8 +101,9 @@ jobs:
           port: 21
           local-dir: ./dist_tienda/
           server-dir: public_html/tienda/
-          security: loose
-          timeout: 300000
+          security: strict
+          timeout: 600000
+          log-level: verbose
           exclude: |
             **/.git*
             **/.git*/**
