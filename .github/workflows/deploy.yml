@@ -111,20 +111,4 @@ jobs:
             **/.git*/**
             data/*.sqlite-journal
 
-      # -----------------------------------------------------------------------
-      # Step 5B: Despliegue alternativo vía SSH / Rsync a /public_html/tienda
-      # Para activarlo si usas acceso SSH en cPanel/VPS:
-      # Configura SSH_HOST, SSH_USER, SSH_KEY en GitHub Secrets
-      # -----------------------------------------------------------------------
-      - name: Deploy via SSH / Rsync to /public_html/tienda
-        if: ${{ env.SSH_HOST != '' }}
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-        uses: easingthemes/ssh-deploy@main
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.SSH_HOST }}
-          REMOTE_USER: ${{ secrets.SSH_USER }}
-          TARGET: ${{ secrets.SSH_TARGET_PATH || 'public_html/tienda' }}
-          SOURCE: "dist_tienda/"
-          EXCLUDE: "/data/*.sqlite-journal, /.git/"
+      
