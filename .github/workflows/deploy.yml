@@ -109,5 +109,8 @@ jobs:
             **/.git*
             **/.git*/**
             data/*.sqlite-journal
+            **/vendor/**
+          security: strict
+          timeout: 600000
 
-      
+  
