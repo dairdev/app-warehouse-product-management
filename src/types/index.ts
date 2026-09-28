@@ -107,4 +107,5 @@ export interface StoreSettings {
   ruc?: string;
   schedule?: string;
   website?: string;
+  logoUrl?: string;
 }

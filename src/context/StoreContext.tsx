@@ -240,6 +240,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(storeSettings));
+
+    // Dynamic favicon: update with custom store logo if available, otherwise keep default logo favicon
+    const faviconElement = document.getElementById('app-favicon') as HTMLLinkElement | null;
+    if (faviconElement) {
+      if (storeSettings.logoUrl && storeSettings.logoUrl.trim()) {
+        faviconElement.href = storeSettings.logoUrl.trim();
+      } else {
+        faviconElement.href = './favicon.svg';
+      }
+    }
   }, [storeSettings]);
 
   // Load from Slim PHP REST API on mount

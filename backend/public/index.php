@@ -86,6 +86,25 @@ $app->get('/assets/{file:.+}', function (Request $request, Response $response, a
     return $response->withStatus(404);
 });
 
+// Serve favicon SVG / ICO if requested through PHP
+$serveFavicon = function (Request $request, Response $response, string $filename): Response {
+    $filePath = __DIR__ . '/' . $filename;
+    if (file_exists($filePath) && is_file($filePath)) {
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $contentType = $ext === 'svg' ? 'image/svg+xml' : 'image/x-icon';
+        $response->getBody()->write((string) file_get_contents($filePath));
+        return $response
+            ->withHeader('Content-Type', $contentType)
+            ->withHeader('Cache-Control', 'public, max-age=604800');
+    }
+    return $response->withStatus(404);
+};
+
+$app->get('/favicon.svg', fn(Request $req, Response $res) => $serveFavicon($req, $res, 'favicon.svg'));
+$app->get('/favicon.ico', fn(Request $req, Response $res) => $serveFavicon($req, $res, 'favicon.ico'));
+$app->get('/tienda/favicon.svg', fn(Request $req, Response $res) => $serveFavicon($req, $res, 'favicon.svg'));
+$app->get('/tienda/favicon.ico', fn(Request $req, Response $res) => $serveFavicon($req, $res, 'favicon.ico'));
+
 // Root endpoint: Serves the React SPA index.html to browsers, or API metadata to JSON clients
 $app->get('/', function (Request $request, Response $response): Response {
     $acceptHeader = $request->getHeaderLine('Accept');
