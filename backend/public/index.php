@@ -87,11 +87,31 @@ $app->get('/assets/{file:.+}', function (Request $request, Response $response, a
     return $response->withStatus(404);
 });
 
-// Serve uploaded user files from /uploads/ if requested through PHP (fallback for Apache / LiteSpeed)
+// Serve uploaded user files and catalog media from /uploads/ or /assets/
 $serveUploadedFile = function (Request $request, Response $response, array $args): Response {
     $filename = basename($args['file']);
-    $filePath = __DIR__ . '/uploads/' . $filename;
-    if (file_exists($filePath) && is_file($filePath)) {
+    $scriptDir = isset($_SERVER['SCRIPT_FILENAME']) ? dirname($_SERVER['SCRIPT_FILENAME']) : '';
+
+    $candidates = [
+        __DIR__ . '/uploads/' . $filename,
+        $scriptDir ? ($scriptDir . '/uploads/' . $filename) : '',
+        dirname(__DIR__) . '/uploads/' . $filename,
+        __DIR__ . '/public/uploads/' . $filename,
+        __DIR__ . '/assets/images/' . $filename,
+        __DIR__ . '/assets/' . $filename,
+        __DIR__ . '/src/assets/images/' . $filename,
+        dirname(__DIR__) . '/src/assets/images/' . $filename,
+    ];
+
+    $filePath = null;
+    foreach ($candidates as $candidate) {
+        if ($candidate !== '' && file_exists($candidate) && is_file($candidate)) {
+            $filePath = $candidate;
+            break;
+        }
+    }
+
+    if ($filePath !== null) {
         $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
         $mimeTypes = [
             'jpg'  => 'image/jpeg',
@@ -109,16 +129,27 @@ $serveUploadedFile = function (Request $request, Response $response, array $args
             'pdf'  => 'application/pdf',
         ];
         $contentType = $mimeTypes[$ext] ?? 'application/octet-stream';
-        $response->getBody()->write((string) file_get_contents($filePath));
+        $fileSize = filesize($filePath);
+        $stream = @fopen($filePath, 'rb');
+        if ($stream !== false) {
+            $response = $response->withBody(new \Slim\Psr7\Stream($stream));
+        } else {
+            $response->getBody()->write((string) file_get_contents($filePath));
+        }
         return $response
             ->withHeader('Content-Type', $contentType)
-            ->withHeader('Cache-Control', 'public, max-age=604800');
+            ->withHeader('Content-Length', (string) $fileSize)
+            ->withHeader('Cache-Control', 'public, max-age=2592000, immutable');
     }
     return $response->withStatus(404);
 };
 
 $app->get('/uploads/{file:.+}', $serveUploadedFile);
 $app->get('/tienda/uploads/{file:.+}', $serveUploadedFile);
+$app->get('/src/assets/images/{file:.+}', $serveUploadedFile);
+$app->get('/tienda/src/assets/images/{file:.+}', $serveUploadedFile);
+$app->get('/assets/images/{file:.+}', $serveUploadedFile);
+$app->get('/tienda/assets/images/{file:.+}', $serveUploadedFile);
 
 // Serve favicon SVG / ICO if requested through PHP
 $serveFavicon = function (Request $request, Response $response, string $filename): Response {

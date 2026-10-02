@@ -1,8 +1,21 @@
-# Disable directory browsing
-Options -Indexes -ExecCGI
+# Disable directory listing without requiring Options directive (avoids 500 error on strict hosts)
+<IfModule mod_autoindex.c>
+    IndexIgnore *
+</IfModule>
 
-# Prevent PHP script execution in uploads directory for maximum security
-<FilesMatch "\.(php|phtml|php3|php4|php5|php7|phps|cgi|pl|exe|sh|py|rb|asp|aspx)$">
+# Disable PHP script execution inside uploads directory
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# Block execution of backend script extensions
+<FilesMatch "(?i)\.(php|phtml|php3|php4|php5|php7|php8|phps|cgi|pl|exe|sh|py|rb|asp|aspx)$">
     <IfModule authz_core_module>
         Require all denied
     </IfModule>
@@ -12,8 +25,8 @@ Options -Indexes -ExecCGI
     </IfModule>
 </FilesMatch>
 
-# Allow direct public access to images, media and documents
-<FilesMatch "\.(jpg|jpeg|png|webp|gif|svg|ico|bmp|avif|mp4|webm|ogg|mov|pdf)$">
+# Allow public delivery of image and media assets
+<FilesMatch "(?i)\.(jpg|jpeg|png|webp|gif|svg|ico|bmp|avif|mp4|webm|ogg|mov|pdf)$">
     <IfModule authz_core_module>
         Require all granted
     </IfModule>
@@ -23,7 +36,7 @@ Options -Indexes -ExecCGI
     </IfModule>
 </FilesMatch>
 
-# Cache headers for uploaded media
+# Cache headers for uploaded media assets
 <IfModule mod_expires.c>
     ExpiresActive On
     ExpiresByType image/jpeg "access plus 1 month"

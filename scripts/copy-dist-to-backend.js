@@ -37,6 +37,24 @@ if (fs.existsSync(distDir)) {
   }
 
   copyRecursive(distDir, backendPublicDir);
+
+  // Ensure catalog sample images from src/assets/images are present in backend/public/uploads
+  const srcImagesDir = path.resolve(process.cwd(), 'src/assets/images');
+  const backendUploadsDir = path.join(backendPublicDir, 'uploads');
+  if (fs.existsSync(srcImagesDir)) {
+    if (!fs.existsSync(backendUploadsDir)) {
+      fs.mkdirSync(backendUploadsDir, { recursive: true });
+    }
+    const images = fs.readdirSync(srcImagesDir);
+    for (const img of images) {
+      const srcImg = path.join(srcImagesDir, img);
+      const destImg = path.join(backendUploadsDir, img);
+      if (fs.statSync(srcImg).isFile() && !fs.existsSync(destImg)) {
+        fs.copyFileSync(srcImg, destImg);
+      }
+    }
+  }
+
   console.log('[build-sync] Successfully synchronized static frontend assets into backend/public/!');
 } else {
   console.warn('[build-sync] dist/ folder does not exist yet. Run vite build first.');

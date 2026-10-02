@@ -15,15 +15,25 @@ export function getMediaUrl(url?: string | null): string {
     return url;
   }
 
-  // If app is running on a subpath like /tienda
-  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/tienda')) {
-    if (url.startsWith('/uploads/')) {
-      return `/tienda${url}`;
-    }
-    if (url.startsWith('uploads/')) {
-      return `/tienda/${url}`;
+  // Normalize legacy /src/assets/images/ to standard /uploads/
+  let normalized = url;
+  if (normalized.includes('/src/assets/images/')) {
+    const filename = normalized.split('/').pop();
+    if (filename) {
+      normalized = `/uploads/${filename}`;
     }
   }
 
-  return url;
+  // If app is running on a subpath like /tienda
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/tienda')) {
+    if (normalized.startsWith('/tienda/')) {
+      return normalized;
+    }
+    if (normalized.startsWith('/')) {
+      return `/tienda${normalized}`;
+    }
+    return `/tienda/${normalized}`;
+  }
+
+  return normalized;
 }

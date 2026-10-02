@@ -1,8 +1,10 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Security: Disable directory browsing
-    Options -Indexes
+    # Security: Disable directory browsing safely without triggering 500 error
+    <IfModule mod_autoindex.c>
+        IndexIgnore *
+    </IfModule>
 
     # Enable HTTP Authorization header passing in PHP
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

@@ -45,7 +45,7 @@ class UploadController extends BaseController
             if (!@mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
                 return $this->errorResponse(
                     $response,
-                    'No se pudo crear la carpeta de subidas en el servidor. Verifique permisos de escritura en public/uploads/.',
+                    "No se pudo crear la carpeta de subidas ({$uploadDir}). Verifique permisos de escritura en el servidor.",
                     500
                 );
             }
@@ -54,7 +54,7 @@ class UploadController extends BaseController
         if (!is_writable($uploadDir)) {
             return $this->errorResponse(
                 $response,
-                'La carpeta de subidas (public/uploads/) no tiene permisos de escritura en el servidor (chmod 775 recomendado).',
+                "La carpeta de subidas ({$uploadDir}) no tiene permisos de escritura en el servidor (chmod 755 o 775 recomendado).",
                 500
             );
         }
@@ -175,21 +175,35 @@ class UploadController extends BaseController
 
     private function getUploadDirectory(): string
     {
-        // Try backend/public/uploads or current directory uploads
+        $scriptDir = isset($_SERVER['SCRIPT_FILENAME']) ? dirname($_SERVER['SCRIPT_FILENAME']) : '';
+
+        // Prioritize production paths (where uploads/ is adjacent to index.php or src/)
         $paths = [
+            $scriptDir ? ($scriptDir . '/uploads') : '',
+            dirname(__DIR__, 2) . '/uploads',
+            dirname(__DIR__, 1) . '/uploads',
+            __DIR__ . '/../../uploads',
             __DIR__ . '/../../public/uploads',
             dirname(__DIR__, 2) . '/public/uploads',
             dirname(__DIR__, 1) . '/public/uploads',
-            $_SERVER['DOCUMENT_ROOT'] . '/uploads',
+            isset($_SERVER['DOCUMENT_ROOT']) ? ($_SERVER['DOCUMENT_ROOT'] . '/uploads') : '',
+            isset($_SERVER['DOCUMENT_ROOT']) ? ($_SERVER['DOCUMENT_ROOT'] . '/tienda/uploads') : '',
         ];
 
         foreach ($paths as $path) {
-            if (is_dir($path)) {
+            if ($path !== '' && is_dir($path)) {
                 return realpath($path) ?: $path;
             }
         }
 
-        return __DIR__ . '/../../public/uploads';
+        // Default candidate to create if not yet existing
+        if ($scriptDir && is_writable($scriptDir)) {
+            $default = $scriptDir . '/uploads';
+        } else {
+            $default = dirname(__DIR__, 2) . '/uploads';
+        }
+
+        return $default;
     }
 
     private function determineBasePrefix(Request $request): string

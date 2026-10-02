@@ -132,12 +132,21 @@ jobs:
           if [ -f backend/public/uploads/.htaccess ]; then cp backend/public/uploads/.htaccess dist_tienda/uploads/; fi
           if [ -f backend/public/uploads/.gitkeep ]; then cp backend/public/uploads/.gitkeep dist_tienda/uploads/; fi
 
+          # Copiar imágenes iniciales del catálogo a dist_tienda/uploads/ y dist_tienda/assets/
+          if [ -d backend/public/uploads ]; then
+            cp -r backend/public/uploads/* dist_tienda/uploads/ 2>/dev/null || true
+          fi
+          if [ -d src/assets/images ]; then
+            cp -r src/assets/images/* dist_tienda/uploads/ 2>/dev/null || true
+          fi
+
           echo "Unified deployment package prepared successfully!"
           ls -la dist_tienda/
           ls -la dist_tienda/assets/
+          ls -la dist_tienda/uploads/
 
       # -----------------------------------------------------------------------
-      # Step 4: Guardar artefacto consolidado en GitHub Actions (Descargable)
+      # Step 5: Guardar artefacto consolidado en GitHub Actions (Descargable)
       # -----------------------------------------------------------------------
       - name: Upload Production Artifact
         uses: actions/upload-artifact@v4
@@ -147,7 +156,7 @@ jobs:
           retention-days: 7
 
       # -----------------------------------------------------------------------
-      # Step 5: Despliegue Unificado vía FTP a /public_html/tienda
+      # Step 6: Despliegue Unificado vía FTP a /public_html/tienda
       # Sube atómicamente el Frontend (JS/CSS/HTML) y el Backend (PHP) juntos
       # en una sola sesión sincronizada para evitar que se borren entre sí.
       # -----------------------------------------------------------------------
@@ -172,11 +181,5 @@ jobs:
             **/.git*/**
             data/*.sqlite-journal
             **/vendor/**
-            uploads/prod_*
-            uploads/*.jpg
-            uploads/*.jpeg
-            uploads/*.png
-            uploads/*.webp
-            uploads/*.mp4
 
   
