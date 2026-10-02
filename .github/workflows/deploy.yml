@@ -15,7 +15,59 @@ jobs:
         uses: actions/checkout@v4
 
       # -----------------------------------------------------------------------
-      # Step 1: Set up Node.js and build Vite React frontend
+      # Step 1: Configure production .env using GitHub Secrets
+      # -----------------------------------------------------------------------
+      - name: Generate .env from GitHub Secrets
+        env:
+          DOT_ENV: ${{ secrets.DOT_ENV || secrets.ENV_FILE }}
+          DB_CONNECTION: ${{ secrets.DB_CONNECTION }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_CHARSET: ${{ secrets.DB_CHARSET }}
+          DB_PATH: ${{ secrets.DB_PATH }}
+          APP_URL: ${{ secrets.APP_URL }}
+          APP_ENV: ${{ secrets.APP_ENV }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          echo "# Auto-generated .env from GitHub Secrets" > .env
+          echo "# Generated: $(date -u)" >> .env
+
+          # 1. Si existe un secreto que contiene el archivo .env completo (DOT_ENV o ENV_FILE)
+          if [ -n "$DOT_ENV" ]; then
+            echo "$DOT_ENV" >> .env
+            echo "Loaded entire .env from secret DOT_ENV / ENV_FILE."
+          else
+            # 2. Ensamblar .env a partir de secretos individuales
+            if [ -n "$DB_CONNECTION" ]; then
+              echo "DB_CONNECTION=\"$DB_CONNECTION\"" >> .env
+            elif [ -n "$DB_HOST" ] && [ -n "$DB_NAME" ]; then
+              echo "DB_CONNECTION=\"mysql\"" >> .env
+            else
+              echo "DB_CONNECTION=\"sqlite\"" >> .env
+            fi
+
+            if [ -n "$DB_HOST" ]; then echo "DB_HOST=\"$DB_HOST\"" >> .env; fi
+            if [ -n "$DB_PORT" ]; then echo "DB_PORT=\"$DB_PORT\"" >> .env; else echo "DB_PORT=\"3306\"" >> .env; fi
+            if [ -n "$DB_NAME" ]; then echo "DB_NAME=\"$DB_NAME\"" >> .env; fi
+            if [ -n "$DB_USER" ]; then echo "DB_USER=\"$DB_USER\"" >> .env; fi
+            if [ -n "$DB_PASSWORD" ]; then echo "DB_PASSWORD=\"$DB_PASSWORD\"" >> .env; fi
+            if [ -n "$DB_CHARSET" ]; then echo "DB_CHARSET=\"$DB_CHARSET\"" >> .env; else echo "DB_CHARSET=\"utf8mb4\"" >> .env; fi
+            if [ -n "$DB_PATH" ]; then echo "DB_PATH=\"$DB_PATH\"" >> .env; fi
+            if [ -n "$APP_URL" ]; then echo "APP_URL=\"$APP_URL\"" >> .env; fi
+            if [ -n "$APP_ENV" ]; then echo "APP_ENV=\"$APP_ENV\"" >> .env; else echo "APP_ENV=\"production\"" >> .env; fi
+            if [ -n "$GEMINI_API_KEY" ]; then echo "GEMINI_API_KEY=\"$GEMINI_API_KEY\"" >> .env; fi
+          fi
+
+          # Replicar a backend/.env para compatibilidad con la API de PHP
+          mkdir -p backend
+          cp .env backend/.env
+          echo "Production .env created successfully with secrets!"
+
+      # -----------------------------------------------------------------------
+      # Step 2: Set up Node.js and build Vite React frontend
       # -----------------------------------------------------------------------
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -29,13 +81,13 @@ jobs:
         run: npm run build
 
       # -----------------------------------------------------------------------
-      # Step 2: Set up PHP and install Slim Framework production dependencies
+      # Step 3: Set up PHP and install Slim Framework production dependencies
       # -----------------------------------------------------------------------
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: mbstring, sqlite3, pdo_sqlite, curl
+          extensions: mbstring, sqlite3, pdo_sqlite, pdo_mysql, curl
 
       - name: Install Composer Dependencies (Production)
         working-directory: ./backend
@@ -45,7 +97,7 @@ jobs:
           fi
 
       # -----------------------------------------------------------------------
-      # Step 3: Prepare complete deployment package for /public_html/tienda
+      # Step 4: Prepare complete deployment package for /public_html/tienda
       # -----------------------------------------------------------------------
       - name: Prepare Unified Deployment Package
         run: |
@@ -64,12 +116,18 @@ jobs:
           if [ -f backend/public/.htaccess ]; then cp backend/public/.htaccess dist_tienda/.htaccess; fi
           cp -r backend/src/* dist_tienda/src/
 
-          # 3. Copiar configuración de datos segura y carpeta de uploads
+          # 3. Copiar archivo .env generado desde GitHub Secrets a producción
+          if [ -f .env ]; then
+            cp .env dist_tienda/.env
+            echo "Copied .env to dist_tienda/.env"
+          fi
+
+          # 4. Copiar configuración de datos segura y carpeta de uploads
           if [ -f backend/data/.htaccess ]; then cp backend/data/.htaccess dist_tienda/data/; fi
           if [ -f backend/data/ferreteria.sqlite ]; then cp backend/data/ferreteria.sqlite dist_tienda/data/; fi
           if [ -f backend/composer.json ]; then cp backend/composer.json dist_tienda/; fi
 
-          # 4. Carpeta de subida de imágenes/videos segura
+          # 5. Carpeta de subida de imágenes/videos segura
           mkdir -p dist_tienda/uploads
           if [ -f backend/public/uploads/.htaccess ]; then cp backend/public/uploads/.htaccess dist_tienda/uploads/; fi
           if [ -f backend/public/uploads/.gitkeep ]; then cp backend/public/uploads/.gitkeep dist_tienda/uploads/; fi

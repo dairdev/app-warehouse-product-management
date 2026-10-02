@@ -18,7 +18,7 @@ class SettingsController extends BaseController
 
     public function get(Request $request, Response $response): Response
     {
-        $stmt = $this->db->query("SELECT key, value FROM store_settings");
+        $stmt = $this->db->query("SELECT `key`, `value` FROM store_settings");
         $rows = $stmt->fetchAll();
 
         $settings = [];
@@ -59,7 +59,7 @@ class SettingsController extends BaseController
             'city', 'ruc', 'schedule', 'website'
         ];
 
-        $stmt = $this->db->prepare("INSERT OR REPLACE INTO store_settings (key, value) VALUES (:key, :value)");
+        $stmt = $this->db->prepare("REPLACE INTO store_settings (`key`, `value`) VALUES (:key, :value)");
 
         foreach ($body as $key => $val) {
             if (in_array($key, $allowedKeys, true)) {

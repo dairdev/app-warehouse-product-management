@@ -6,6 +6,11 @@ const SCHEMA_SQL_CONTENT = `-- BASE DE DATOS: Ferretería Almacenes Nor Oriente
 -- Motor: MySQL 8.0+
 -- Juego de caracteres: utf8mb4 / Collation: utf8mb4_unicode_ci
 
+CREATE TABLE store_settings (
+    \`key\` VARCHAR(100) PRIMARY KEY,
+    \`value\` TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE users (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
@@ -44,24 +49,41 @@ CREATE TABLE categories (
     CONSTRAINT fk_categories_parent FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE brands (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    slug VARCHAR(180) NOT NULL UNIQUE,
+    description TEXT NULL,
+    origin VARCHAR(100) DEFAULT 'Perú',
+    logo_url TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE products (
-    id VARCHAR(36) PRIMARY KEY,
-    name VARCHAR(200) NOT NULL,
-    slug VARCHAR(220) NOT NULL UNIQUE,
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL UNIQUE,
     description TEXT NOT NULL,
-    category_id VARCHAR(36) NOT NULL,
-    subcategory_id VARCHAR(36) NULL,
+    category_id VARCHAR(100) NOT NULL,
+    subcategory_id VARCHAR(100) NULL,
+    brand_id VARCHAR(100) NULL,
+    brand_name VARCHAR(150) NULL,
+    presentation VARCHAR(100) NULL,
     price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    currency VARCHAR(3) NOT NULL DEFAULT 'PEN',
-    unit VARCHAR(40) NOT NULL DEFAULT 'unidad',
+    currency VARCHAR(10) NOT NULL DEFAULT 'PEN',
+    unit VARCHAR(50) NOT NULL DEFAULT 'unidad',
     stock INT NOT NULL DEFAULT 0,
     min_stock_alert INT NOT NULL DEFAULT 10,
-    sku VARCHAR(60) NOT NULL UNIQUE,
-    is_featured TINYINT(1) DEFAULT 0,
+    sku VARCHAR(100) NULL,
+    featured TINYINT(1) DEFAULT 0,
+    attributes JSON NULL,
+    media JSON NULL,
+    tags JSON NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT,
     CONSTRAINT fk_products_subcategory FOREIGN KEY (subcategory_id) REFERENCES categories(id) ON DELETE SET NULL,
+    CONSTRAINT fk_products_brand FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE SET NULL,
     INDEX idx_products_category (category_id),
     INDEX idx_products_sku (sku)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

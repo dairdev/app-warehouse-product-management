@@ -17,8 +17,8 @@
     RewriteRule ^ index.php [QSA,L]
 </IfModule>
 
-# Security: Deny direct HTTP access to database files, configs, and lockfiles
-<FilesMatch "\.(sqlite|sqlite3|db|env|lock|md|yml|yaml|ini|log|sh)$">
+# Security: Deny direct HTTP access to database files, .env, configs, and lockfiles
+<FilesMatch "(^\.env|\.(sqlite|sqlite3|db|env|lock|md|yml|yaml|ini|log|sh)$)">
     <IfModule authz_core_module>
         Require all denied
     </IfModule>
@@ -27,6 +27,16 @@
         Deny from all
     </IfModule>
 </FilesMatch>
+
+<Files ".env">
+    <IfModule authz_core_module>
+        Require all denied
+    </IfModule>
+    <IfModule !authz_core_module>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</Files>
 
 # Optional GZIP Compression for fast asset loading on Apache
 <IfModule mod_deflate.c>

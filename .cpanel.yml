@@ -6,6 +6,7 @@ deployment:
     - /bin/cp -R backend/public/* $DEPLOYPATH/
     - /bin/cp -R backend/src $DEPLOYPATH/
     - /bin/cp -R backend/vendor $DEPLOYPATH/
+    - if [ -f .env ]; then /bin/cp .env $DEPLOYPATH/.env; fi
     - /bin/mkdir -p $DEPLOYPATH/data
     - if [ ! -f $DEPLOYPATH/data/ferreteria.sqlite ] && [ -f backend/data/ferreteria.sqlite ]; then /bin/cp backend/data/ferreteria.sqlite $DEPLOYPATH/data/; fi
     - /bin/chmod -R 775 $DEPLOYPATH/data

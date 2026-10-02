@@ -8,10 +8,75 @@ use PDOException;
 class Database
 {
     private static ?PDO $instance = null;
+    private static bool $envLoaded = false;
+
+    /**
+     * Loads variables from .env file into putenv, $_ENV, and $_SERVER
+     */
+    public static function loadEnv(): void
+    {
+        if (self::$envLoaded) {
+            return;
+        }
+        self::$envLoaded = true;
+
+        $envFiles = [
+            __DIR__ . '/../../.env',
+            __DIR__ . '/../.env',
+            dirname(__DIR__, 2) . '/.env',
+            dirname(__DIR__) . '/.env',
+            __DIR__ . '/.env',
+        ];
+
+        foreach ($envFiles as $file) {
+            if (file_exists($file) && is_readable($file)) {
+                $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                if ($lines !== false) {
+                    foreach ($lines as $line) {
+                        $line = trim($line);
+                        if ($line === '' || str_starts_with($line, '#')) {
+                            continue;
+                        }
+                        if (str_contains($line, '=')) {
+                            [$key, $val] = explode('=', $line, 2);
+                            $key = trim($key);
+                            $val = trim($val);
+                            if ((str_starts_with($val, '"') && str_ends_with($val, '"')) ||
+                                (str_starts_with($val, "'") && str_ends_with($val, "'"))) {
+                                $val = substr($val, 1, -1);
+                            }
+                            if (!isset($_SERVER[$key]) && !isset($_ENV[$key])) {
+                                putenv("{$key}={$val}");
+                                $_ENV[$key] = $val;
+                                $_SERVER[$key] = $val;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    /**
+     * Safely get environment variable with fallback default
+     */
+    public static function getEnvVar(string $name, mixed $default = null): mixed
+    {
+        self::loadEnv();
+        if (isset($_ENV[$name]) && $_ENV[$name] !== '') {
+            return $_ENV[$name];
+        }
+        if (isset($_SERVER[$name]) && $_SERVER[$name] !== '') {
+            return $_SERVER[$name];
+        }
+        $val = getenv($name);
+        return ($val !== false && $val !== '') ? $val : $default;
+    }
 
     public static function getDatabaseFile(): string
     {
-        $envPath = getenv('DB_PATH');
+        $envPath = self::getEnvVar('DB_PATH');
         if ($envPath) {
             return $envPath;
         }
@@ -35,17 +100,27 @@ class Database
     public static function getConnection(): PDO
     {
         if (self::$instance === null) {
-            $dbHost = getenv('DB_HOST');
-            $dbName = getenv('DB_NAME');
-            $dbUser = getenv('DB_USER');
-            $dbPass = getenv('DB_PASSWORD');
+            self::loadEnv();
 
-            if ($dbHost && $dbName) {
-                // MySQL connection
-                $dsn = "mysql:host={$dbHost};dbname={$dbName};charset=utf8mb4";
+            $dbConnection = strtolower((string)self::getEnvVar('DB_CONNECTION', ''));
+            $dbHost = self::getEnvVar('DB_HOST');
+            $dbPort = self::getEnvVar('DB_PORT', '3306');
+            $dbName = self::getEnvVar('DB_NAME');
+            $dbUser = self::getEnvVar('DB_USER');
+            $dbPass = self::getEnvVar('DB_PASSWORD', '');
+            $dbCharset = self::getEnvVar('DB_CHARSET', 'utf8mb4');
+
+            // Determine if MySQL should be used
+            $useMySql = ($dbConnection === 'mysql') || (!empty($dbHost) && !empty($dbName) && $dbConnection !== 'sqlite');
+
+            if ($useMySql) {
+                // MySQL / MariaDB connection
+                $dsn = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset={$dbCharset}";
                 self::$instance = new PDO($dsn, $dbUser ?: 'root', $dbPass ?: '', [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                    PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES {$dbCharset} COLLATE utf8mb4_unicode_ci",
                 ]);
             } else {
                 // SQLite connection
@@ -70,12 +145,15 @@ class Database
 
     private static function initializeTables(PDO $pdo): void
     {
+        $isMySql = ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql');
+        $tableOpts = $isMySql ? " ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci" : "";
+
         // 1. Settings Table
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS store_settings (
-                key VARCHAR(100) PRIMARY KEY,
-                value TEXT NOT NULL
-            );
+                `key` VARCHAR(100) PRIMARY KEY,
+                `value` TEXT NOT NULL
+            ){$tableOpts};
         ");
 
         // 2. Categories Table
@@ -91,7 +169,7 @@ class Database
                 default_presentations TEXT,
                 created_at TEXT,
                 updated_at TEXT
-            );
+            ){$tableOpts};
         ");
 
         // 3. Brands Table
@@ -104,7 +182,7 @@ class Database
                 origin VARCHAR(100) DEFAULT 'Perú',
                 logo_url TEXT,
                 created_at TEXT
-            );
+            ){$tableOpts};
         ");
 
         // 4. Products Table
@@ -129,7 +207,7 @@ class Database
                 tags TEXT,
                 created_at TEXT,
                 updated_at TEXT
-            );
+            ){$tableOpts};
         ");
 
         // 5. Users Table
@@ -144,7 +222,7 @@ class Database
                 password_hash VARCHAR(255) NULL,
                 created_at TEXT,
                 updated_at TEXT
-            );
+            ){$tableOpts};
         ");
 
         // 6. Tags Table
@@ -154,7 +232,7 @@ class Database
                 name VARCHAR(100) NOT NULL,
                 slug VARCHAR(100) NOT NULL,
                 color VARCHAR(50) DEFAULT 'yellow'
-            );
+            ){$tableOpts};
         ");
 
         // Check if data is already seeded
@@ -180,7 +258,7 @@ class Database
 
         // Seed Store Settings
         if (!empty($data['settings'])) {
-            $stmt = $pdo->prepare("INSERT OR REPLACE INTO store_settings (key, value) VALUES (:key, :value)");
+            $stmt = $pdo->prepare("REPLACE INTO store_settings (`key`, `value`) VALUES (:key, :value)");
             foreach ($data['settings'] as $k => $v) {
                 $stmt->execute([
                     ':key' => $k,
