@@ -139,9 +139,9 @@ CREATE TABLE tags (
 CREATE TABLE product_tags (
     product_id VARCHAR(36) NOT NULL,
     tag_id VARCHAR(36) NOT NULL,
-    profile_id VARCHAR(36) NULL,
+    profile_id VARCHAR(36) NOT NULL DEFAULT 'GLOBAL',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (product_id, tag_id, COALESCE(profile_id, 'GLOBAL')),
+    PRIMARY KEY (product_id, tag_id, profile_id),
     CONSTRAINT fk_pt_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     CONSTRAINT fk_pt_tag FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE,
     INDEX idx_pt_profile (profile_id)
