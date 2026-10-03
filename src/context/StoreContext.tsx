@@ -354,6 +354,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const logout = () => {
     setCurrentUser(null);
     showToast('Sesión cerrada correctamente. Ahora navegas como cliente.');
+    window.location.hash = '';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
   };
 
   const switchRole = (role: 'guest' | 'admin' | 'staff' | 'client') => {

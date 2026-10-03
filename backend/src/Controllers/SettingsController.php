@@ -37,6 +37,12 @@ class SettingsController extends BaseController
             'ruc' => '20601234567',
             'schedule' => 'Lunes a Sábado: 7:00 am - 6:00 pm',
             'website' => '',
+            'catalogHeaderBadge' => 'Distribución Mayorista & Menorista Directo a Obra',
+            'catalogHeaderTitle' => 'Materiales de Construcción Pesada & Fichas Técnicas',
+            'catalogHeaderSubtitle' => 'Precios por mayor, stock certificado bajo normas ASTM / NTP y cotización directa por WhatsApp para ingenieros, maestros de obra y constructoras.',
+            'headerTagline' => 'Materiales de Construcción · Selva Central & Norte',
+            'profileHeaderTitle' => 'Datos de la Obra / Cliente',
+            'profileHeaderSubtitle' => 'Perfil de Obra & Lista de Materiales Etiquetados',
         ];
 
         $result = array_merge($defaults, $settings);
@@ -56,7 +62,9 @@ class SettingsController extends BaseController
 
         $allowedKeys = [
             'name', 'phone', 'whatsappNumber', 'email', 'address',
-            'city', 'ruc', 'schedule', 'website'
+            'city', 'ruc', 'schedule', 'website',
+            'catalogHeaderBadge', 'catalogHeaderTitle', 'catalogHeaderSubtitle',
+            'headerTagline', 'profileHeaderTitle', 'profileHeaderSubtitle',
         ];
 
         $stmt = $this->db->prepare("REPLACE INTO store_settings (`key`, `value`) VALUES (:key, :value)");

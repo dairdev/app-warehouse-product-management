@@ -133,17 +133,15 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-stone-800/90 text-yellow-400 text-xs font-semibold uppercase tracking-wider mb-4 border border-stone-700">
               <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
-              <span>Distribución Mayorista & Menorista Directo a Obra</span>
+              <span>{storeSettings.catalogHeaderBadge || 'Distribución Mayorista & Menorista Directo a Obra'}</span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4 leading-tight">
-              Materiales de Construcción Pesada & Fichas Técnicas
+              {storeSettings.catalogHeaderTitle || 'Materiales de Construcción Pesada & Fichas Técnicas'}
             </h1>
 
             <p className="text-stone-300 text-sm sm:text-base leading-relaxed mb-6 font-normal">
-              Consulte especificaciones certificadas (NTP / ASTM), medidas, pesos y precios vigentes
-              en cementos, ladrillos, fierro corrugado, arenas y gravas. Descargue fichas o solicite
-              flete inmediato a pie de obra.
+              {storeSettings.catalogHeaderSubtitle || 'Consulte especificaciones certificadas (NTP / ASTM), medidas, pesos y precios vigentes en cementos, ladrillos, fierro corrugado, arenas y gravas. Descargue fichas o solicite flete inmediato a pie de obra.'}
             </p>
 
             {/* Action Bar */}

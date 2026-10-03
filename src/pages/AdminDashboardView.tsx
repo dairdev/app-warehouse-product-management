@@ -29,6 +29,10 @@ import {
   MapPin,
   Clock,
   Send,
+  Type,
+  Layout,
+  Sparkles,
+  Bookmark,
 } from 'lucide-react';
 
 interface AdminDashboardViewProps {
@@ -105,6 +109,27 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [storeRuc, setStoreRuc] = useState(storeSettings.ruc || '');
   const [storeSchedule, setStoreSchedule] = useState(storeSettings.schedule || '');
 
+  // Page Headers state (Admin only)
+  const [catalogHeaderBadge, setCatalogHeaderBadge] = useState(
+    storeSettings.catalogHeaderBadge || 'Distribución Mayorista & Menorista Directo a Obra'
+  );
+  const [catalogHeaderTitle, setCatalogHeaderTitle] = useState(
+    storeSettings.catalogHeaderTitle || 'Materiales de Construcción Pesada & Fichas Técnicas'
+  );
+  const [catalogHeaderSubtitle, setCatalogHeaderSubtitle] = useState(
+    storeSettings.catalogHeaderSubtitle ||
+      'Precios por mayor, stock certificado bajo normas ASTM / NTP y cotización directa por WhatsApp para ingenieros, maestros de obra y constructoras.'
+  );
+  const [headerTagline, setHeaderTagline] = useState(
+    storeSettings.headerTagline || 'Materiales de Construcción · Selva Central & Norte'
+  );
+  const [profileHeaderTitle, setProfileHeaderTitle] = useState(
+    storeSettings.profileHeaderTitle || 'Datos de la Obra / Cliente'
+  );
+  const [profileHeaderSubtitle, setProfileHeaderSubtitle] = useState(
+    storeSettings.profileHeaderSubtitle || 'Perfil de Obra & Lista de Materiales Etiquetados'
+  );
+
   useEffect(() => {
     setStoreName(storeSettings.name);
     setStoreAddress(storeSettings.address);
@@ -114,6 +139,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setStoreEmail(storeSettings.email);
     setStoreRuc(storeSettings.ruc || '');
     setStoreSchedule(storeSettings.schedule || '');
+
+    setCatalogHeaderBadge(storeSettings.catalogHeaderBadge || 'Distribución Mayorista & Menorista Directo a Obra');
+    setCatalogHeaderTitle(storeSettings.catalogHeaderTitle || 'Materiales de Construcción Pesada & Fichas Técnicas');
+    setCatalogHeaderSubtitle(
+      storeSettings.catalogHeaderSubtitle ||
+        'Precios por mayor, stock certificado bajo normas ASTM / NTP y cotización directa por WhatsApp para ingenieros, maestros de obra y constructoras.'
+    );
+    setHeaderTagline(storeSettings.headerTagline || 'Materiales de Construcción · Selva Central & Norte');
+    setProfileHeaderTitle(storeSettings.profileHeaderTitle || 'Datos de la Obra / Cliente');
+    setProfileHeaderSubtitle(storeSettings.profileHeaderSubtitle || 'Perfil de Obra & Lista de Materiales Etiquetados');
   }, [storeSettings]);
 
   const handleSaveStoreSettings = (e: React.FormEvent) => {
@@ -127,7 +162,25 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       email: storeEmail.trim(),
       ruc: storeRuc.trim(),
       schedule: storeSchedule.trim(),
+      catalogHeaderBadge: catalogHeaderBadge.trim(),
+      catalogHeaderTitle: catalogHeaderTitle.trim(),
+      catalogHeaderSubtitle: catalogHeaderSubtitle.trim(),
+      headerTagline: headerTagline.trim(),
+      profileHeaderTitle: profileHeaderTitle.trim(),
+      profileHeaderSubtitle: profileHeaderSubtitle.trim(),
     });
+  };
+
+  const handleResetHeaderDefaults = () => {
+    setCatalogHeaderBadge('Distribución Mayorista & Menorista Directo a Obra');
+    setCatalogHeaderTitle('Materiales de Construcción Pesada & Fichas Técnicas');
+    setCatalogHeaderSubtitle(
+      'Precios por mayor, stock certificado bajo normas ASTM / NTP y cotización directa por WhatsApp para ingenieros, maestros de obra y constructoras.'
+    );
+    setHeaderTagline('Materiales de Construcción · Selva Central & Norte');
+    setProfileHeaderTitle('Datos de la Obra / Cliente');
+    setProfileHeaderSubtitle('Perfil de Obra & Lista de Materiales Etiquetados');
+    showToast('Títulos y subtítulos restablecidos a valores recomendados');
   };
 
   // KPIs (No stock KPIs!)
@@ -698,7 +751,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 >
                   <div className="flex items-center justify-between border-b border-stone-200 pb-2">
                     <span className="text-xs font-bold text-stone-900">
-                      {editingCategory ? `Editar Categoría: ${editingCategory.name}` : 'Registrar Nueva Categoría o Subcategoría'}
+                      {editingCategory
+                        ? (catParentId !== 'none' ? `Editar Sub Categoria: ${editingCategory.name}` : `Editar Categoría: ${editingCategory.name}`)
+                        : (catParentId !== 'none' ? 'Registrar Nueva Sub Categoria' : 'Registrar Nueva Categoría Principal')}
                     </span>
                     <button
                       type="button"
@@ -716,14 +771,18 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                        Nombre de la categoría *
+                        {catParentId !== 'none' ? 'Sub Categoria *' : 'Nombre de la categoría *'}
                       </label>
                       <input
                         type="text"
                         required
                         value={catName}
                         onChange={(e) => setCatName(e.target.value)}
-                        placeholder="Ej: Aceros, Mallas, Cemento Sol..."
+                        placeholder={
+                          catParentId !== 'none'
+                            ? 'Ej: Fierro Corrugado 1/2", King Kong 18 Huecos...'
+                            : 'Ej: Aceros, Mallas, Cemento Sol...'
+                        }
                         className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white"
                       />
                     </div>
@@ -1506,13 +1565,142 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-stone-200 flex justify-end">
+                    {/* SECTION: ADMINISTRATION OF PAGE HEADER TITLES & SUBTITLES */}
+                    <div className="pt-6 border-t border-stone-200 space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-sm text-stone-900 flex items-center gap-2">
+                            <Type className="w-4 h-4 text-amber-600" />
+                            <span>Administración de Encabezados (Títulos y Subtítulos)</span>
+                          </h4>
+                          <p className="text-xs text-stone-500 mt-0.5">
+                            Personalice los textos principales que ven los clientes en el catálogo, perfil de cotización y barra superior.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleResetHeaderDefaults}
+                          className="text-[11px] text-amber-800 hover:text-amber-950 font-semibold underline self-start sm:self-auto"
+                        >
+                          Restablecer por defecto
+                        </button>
+                      </div>
+
+                      {/* Group 1: Catálogo Principal (Hero Header) */}
+                      <div className="bg-stone-50/70 p-4 rounded-xl border border-stone-200/80 space-y-3">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                          <Layout className="w-3.5 h-3.5 text-amber-700" />
+                          <span>1. Encabezado del Catálogo Principal (Banner Hero)</span>
+                        </span>
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-stone-700 mb-1">
+                              Distintivo / Etiqueta Superior (Badge)
+                            </label>
+                            <input
+                              type="text"
+                              value={catalogHeaderBadge}
+                              onChange={(e) => setCatalogHeaderBadge(e.target.value)}
+                              placeholder="Ej: Distribución Mayorista & Menorista Directo a Obra"
+                              className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-stone-700 mb-1">
+                              Título Principal del Catálogo (H1) *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={catalogHeaderTitle}
+                              onChange={(e) => setCatalogHeaderTitle(e.target.value)}
+                              placeholder="Ej: Materiales de Construcción Pesada & Fichas Técnicas"
+                              className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400 font-semibold text-stone-900"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-stone-700 mb-1">
+                              Subtítulo / Bajada Descriptiva del Catálogo
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={catalogHeaderSubtitle}
+                              onChange={(e) => setCatalogHeaderSubtitle(e.target.value)}
+                              placeholder="Ej: Precios por mayor, stock certificado bajo normas ASTM / NTP..."
+                              className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Group 2: Barra de Navegación (Header / Navbar) */}
+                      <div className="bg-stone-50/70 p-4 rounded-xl border border-stone-200/80 space-y-3">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-700" />
+                          <span>2. Barra Superior (Navbar Header)</span>
+                        </span>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-stone-700 mb-1">
+                            Lema o Subtítulo junto al Logotipo (Tagline)
+                          </label>
+                          <input
+                            type="text"
+                            value={headerTagline}
+                            onChange={(e) => setHeaderTagline(e.target.value)}
+                            placeholder="Ej: Materiales de Construcción · Selva Central & Norte"
+                            className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Group 3: Perfil de Obra / Cotizador */}
+                      <div className="bg-stone-50/70 p-4 rounded-xl border border-stone-200/80 space-y-3">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+                          <Bookmark className="w-3.5 h-3.5 text-amber-700" />
+                          <span>3. Encabezado de la Página de Perfil / Cotizador de Obra</span>
+                        </span>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-stone-700 mb-1">
+                              Título del Encabezado de Perfil
+                            </label>
+                            <input
+                              type="text"
+                              value={profileHeaderTitle}
+                              onChange={(e) => setProfileHeaderTitle(e.target.value)}
+                              placeholder="Ej: Datos de la Obra / Cliente"
+                              className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-stone-700 mb-1">
+                              Subtítulo / Barra Superior de Perfil
+                            </label>
+                            <input
+                              type="text"
+                              value={profileHeaderSubtitle}
+                              onChange={(e) => setProfileHeaderSubtitle(e.target.value)}
+                              placeholder="Ej: Perfil de Obra & Lista de Materiales Etiquetados"
+                              className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-stone-200 flex justify-end">
                       <button
                         type="submit"
                         className="px-6 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-stone-950 font-bold rounded-xl text-xs flex items-center gap-2 shadow-xs transition-colors"
                       >
                         <Check className="w-4 h-4" />
-                        <span>Guardar Datos de la Ferretería</span>
+                        <span>Guardar Datos y Encabezados</span>
                       </button>
                     </div>
                   </form>
@@ -1520,6 +1708,31 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
                 {/* Live Preview Column (4 cols) */}
                 <div className="lg:col-span-4 space-y-4">
+                  {/* Live Hero Header Preview */}
+                  <div className="bg-stone-900 text-white rounded-2xl p-5 shadow-xs border border-stone-800 space-y-3">
+                    <span className="text-[10px] font-mono text-yellow-400 uppercase tracking-wider block font-bold">
+                      Vista Previa: Encabezado del Catálogo
+                    </span>
+
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-stone-800 text-yellow-400 text-[10px] font-semibold uppercase tracking-wider border border-stone-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
+                      <span className="line-clamp-1">{catalogHeaderBadge || 'Distribución Mayorista & Menorista'}</span>
+                    </div>
+
+                    <h4 className="text-sm font-black text-white leading-snug">
+                      {catalogHeaderTitle || 'Título del Catálogo'}
+                    </h4>
+
+                    <p className="text-[11px] text-stone-300 leading-relaxed line-clamp-3">
+                      {catalogHeaderSubtitle || 'Subtítulo descriptivo del catálogo...'}
+                    </p>
+
+                    {headerTagline && (
+                      <div className="pt-2 border-t border-stone-800 text-[10px] text-stone-400">
+                        Lema en Navbar: <span className="text-yellow-400 font-semibold">{headerTagline}</span>
+                      </div>
+                    )}
+                  </div>
                   <div className="bg-stone-900 text-white rounded-2xl p-5 shadow-xs border border-stone-800 space-y-3">
                     <span className="text-[10px] font-mono text-yellow-400 uppercase tracking-wider block font-bold">
                       Vista Previa de Identidad

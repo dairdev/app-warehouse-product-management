@@ -90,8 +90,8 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = ({
             <span>Volver al Catálogo</span>
           </button>
 
-          <span className="text-xs text-stone-400">
-            Perfil de Obra & Lista de Materiales Etiquetados
+          <span className="text-xs text-stone-500 font-medium">
+            {storeSettings.profileHeaderSubtitle || 'Perfil de Obra & Lista de Materiales Etiquetados'}
           </span>
         </div>
       </div>
@@ -106,7 +106,9 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = ({
                   <User className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-stone-900">Datos de la Obra / Cliente</h3>
+                  <h3 className="font-bold text-sm text-stone-900">
+                    {storeSettings.profileHeaderTitle || 'Datos de la Obra / Cliente'}
+                  </h3>
                   <span className="text-[11px] text-stone-400">Guardado en este navegador</span>
                 </div>
               </div>

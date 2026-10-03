@@ -37,14 +37,21 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-18">
-          {/* Zone 1: Brand Wordmark */}
-          <button
-            onClick={() => onNavigate('catalog')}
-            className="flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 rounded-lg group text-left"
-            title="Ir al Catálogo Principal"
-          >
-            <Logo size="md" variant="horizontal" />
-          </button>
+          {/* Zone 1: Brand Wordmark & Optional Header Tagline */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onNavigate('catalog')}
+              className="flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 rounded-lg group text-left"
+              title="Ir al Catálogo Principal"
+            >
+              <Logo size="md" variant="horizontal" />
+            </button>
+            {storeSettings.headerTagline && (
+              <span className="hidden xl:inline-block pl-3 border-l border-stone-200 text-[11px] text-stone-500 font-medium leading-tight max-w-[220px]">
+                {storeSettings.headerTagline}
+              </span>
+            )}
+          </div>
 
           {/* Zone 2: Navigation Links (Clean text links with hover underline, no pills) */}
           <nav className="hidden lg:flex items-center gap-7 text-sm font-medium text-stone-600">
@@ -199,6 +206,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                       onClick={() => {
                         logout();
+                        onNavigate('catalog');
                         setRoleSwitcherOpen(false);
                       }}
                       className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-50 text-red-600 flex items-center gap-1.5 mt-1"
@@ -300,6 +308,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={() => {
                     logout();
+                    onNavigate('catalog');
                     setMobileMenuOpen(false);
                   }}
                   className="w-full text-left px-3 py-2 rounded-lg text-xs text-red-600 font-medium hover:bg-red-50"

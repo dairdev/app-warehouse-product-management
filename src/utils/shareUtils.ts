@@ -10,6 +10,13 @@ export const STORE_INFO: StoreSettings = {
   ruc: '20601234567',
   schedule: 'Lunes a Sábado: 7:00 am - 6:00 pm',
   website: typeof window !== 'undefined' ? window.location.origin : '',
+  // Page Headers Configuration
+  catalogHeaderBadge: 'Distribución Mayorista & Menorista Directo a Obra',
+  catalogHeaderTitle: 'Materiales de Construcción Pesada & Fichas Técnicas',
+  catalogHeaderSubtitle: 'Precios por mayor, stock certificado bajo normas ASTM / NTP y cotización directa por WhatsApp para ingenieros, maestros de obra y constructoras.',
+  headerTagline: 'Materiales de Construcción · Selva Central & Norte',
+  profileHeaderTitle: 'Datos de la Obra / Cliente',
+  profileHeaderSubtitle: 'Perfil de Obra & Lista de Materiales Etiquetados',
 };
 
 export const formatCurrency = (amount?: number | null, currency: 'PEN' | 'USD' = 'PEN') => {

@@ -73,6 +73,15 @@ function AppContent() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // Ensure redirect to catalog when user logs out while in admin dashboard
+  useEffect(() => {
+    if (!currentUser && currentView === 'admin-dashboard') {
+      window.location.hash = '';
+      setCurrentView('catalog');
+      setActiveProductId(null);
+    }
+  }, [currentUser, currentView]);
+
   const navigateTo = (view: string, id?: string) => {
     if (view === 'catalog') {
       window.location.hash = '';

@@ -108,4 +108,11 @@ export interface StoreSettings {
   schedule?: string;
   website?: string;
   logoUrl?: string;
+  // Page Headers Configuration
+  catalogHeaderBadge?: string;
+  catalogHeaderTitle?: string;
+  catalogHeaderSubtitle?: string;
+  headerTagline?: string;
+  profileHeaderTitle?: string;
+  profileHeaderSubtitle?: string;
 }
