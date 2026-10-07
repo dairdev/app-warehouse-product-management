@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
-import { Product, Category, User, Brand } from '../types';
+import { Product, Category, User, Brand, Machinery } from '../types';
 import { ProductFormModal } from '../components/ProductFormModal';
+import { MachineryFormModal } from '../components/MachineryFormModal';
 import { SlimApiStatusTab } from '../components/SlimApiStatusTab';
-import { formatCurrency } from '../utils/shareUtils';
+import { MachineryRentalManagement } from '../components/MachineryRentalManagement';
+import { MachineryBrandManagement } from '../components/MachineryBrandManagement';
 import { downloadFullCatalogPdf } from '../utils/pdfExport';
 import {
   Package,
@@ -33,6 +35,11 @@ import {
   Layout,
   Sparkles,
   Bookmark,
+  Truck,
+  Wrench,
+  Zap,
+  Calendar,
+  CalendarDays,
 } from 'lucide-react';
 
 interface AdminDashboardViewProps {
@@ -48,6 +55,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     products,
     categories,
     brands,
+    machineries,
+    machineryBrands,
+    rentalRequests,
     users,
     currentUser,
     clientProfile,
@@ -60,6 +70,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     addBrand,
     updateBrand,
     deleteBrand,
+    deleteMachinery,
     addUser,
     deleteUser,
     updateStoreSettings,
@@ -67,7 +78,11 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     backendStatus,
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'brands' | 'users' | 'settings' | 'export' | 'api'>('products');
+  const [activeTab, setActiveTab] = useState<
+    'products' | 'machinery' | 'rentals' | 'machinery-brands' | 'categories' | 'brands' | 'users' | 'settings' | 'export' | 'api'
+  >('products');
+
+  const pendingRentalsCount = rentalRequests.filter((r) => r.status === 'pending').length;
 
   // Product management state
   const [productSearch, setProductSearch] = useState('');
@@ -75,6 +90,13 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
+  // Machinery management state
+  const [machinerySearch, setMachinerySearch] = useState('');
+  const [machineryCategoryFilter, setMachineryCategoryFilter] = useState('all');
+  const [editingMachinery, setEditingMachinery] = useState<Machinery | null>(null);
+  const [isMachineryModalOpen, setIsMachineryModalOpen] = useState(false);
+  const [machineryToDelete, setMachineryToDelete] = useState<Machinery | null>(null);
 
   // Category management state (Full CRUD)
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -211,6 +233,32 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     });
   }, [products, productSearch, productCatFilter]);
 
+  // Filtered machinery in admin table
+  const filteredAdminMachinery = useMemo(() => {
+    return machineries.filter((item) => {
+      if (machineryCategoryFilter !== 'all' && item.category !== machineryCategoryFilter) {
+        return false;
+      }
+      if (machinerySearch.trim()) {
+        const q = machinerySearch.toLowerCase();
+        const mName = item.name.toLowerCase().includes(q);
+        const mBrand = item.brand.toLowerCase().includes(q);
+        const mModel = item.model.toLowerCase().includes(q);
+        const mCat = item.categoryName.toLowerCase().includes(q);
+        if (!mName && !mBrand && !mModel && !mCat) return false;
+      }
+      return true;
+    });
+  }, [machineries, machineryCategoryFilter, machinerySearch]);
+
+  const confirmDeleteMachinery = () => {
+    if (machineryToDelete) {
+      deleteMachinery(machineryToDelete.id);
+      showToast(`Equipo "${machineryToDelete.name}" eliminado de la flota`);
+      setMachineryToDelete(null);
+    }
+  };
+
   // Category CRUD Handlers
   const handleSaveCategory = (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,7 +289,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         name: catName.trim(),
         slug,
         description: catDesc.trim(),
-        parentId: catParentId === 'none' ? null : catParentId,
+        parentId: null,
         sortOrder: categories.length + 1,
         defaultPresentations: presentationsList.length > 0 ? presentationsList : undefined,
       });
@@ -258,17 +306,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     setEditingCategory(cat);
     setCatName(cat.name);
     setCatDesc(cat.description || '');
-    setCatParentId(cat.parentId || 'none');
+    setCatParentId('none');
     setCatPresentations(cat.defaultPresentations ? cat.defaultPresentations.join(', ') : '');
-    setIsAddingCategory(true);
-  };
-
-  const handleStartAddSubcategory = (parentId: string) => {
-    setEditingCategory(null);
-    setCatName('');
-    setCatDesc('');
-    setCatParentId(parentId);
-    setCatPresentations('');
     setIsAddingCategory(true);
   };
 
@@ -371,7 +410,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           </div>
 
           {/* KPI Stat Cards (NO STOCK SHOWN) */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mt-6">
             <div className="bg-stone-800/80 rounded-xl p-3.5 border border-stone-700">
               <div className="flex items-center justify-between text-stone-400 text-xs">
                 <span>Total Materiales</span>
@@ -381,6 +420,17 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 {totalProducts}
               </div>
               <span className="text-[11px] text-stone-400">En catálogo público</span>
+            </div>
+
+            <div className="bg-stone-800/80 rounded-xl p-3.5 border border-stone-700">
+              <div className="flex items-center justify-between text-stone-400 text-xs">
+                <span>Flota Maquinaria</span>
+                <Truck className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className="text-2xl font-black text-amber-300 mt-1 tabular-nums">
+                {machineries.length}
+              </div>
+              <span className="text-[11px] text-stone-400">Equipos de alquiler</span>
             </div>
 
             <div className="bg-stone-800/80 rounded-xl p-3.5 border border-stone-700">
@@ -431,6 +481,48 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             Gestión de Materiales ({products.length})
           </button>
           <button
+            onClick={() => setActiveTab('machinery')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === 'machinery'
+                ? 'border-yellow-400 text-white'
+                : 'border-transparent text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            <Truck className="w-3.5 h-3.5 text-amber-400" />
+            <span>Flota de Maquinaria ({machineries.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('rentals')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === 'rentals'
+                ? 'border-yellow-400 text-white'
+                : 'border-transparent text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            <CalendarDays className="w-3.5 h-3.5 text-yellow-400" />
+            <span>Solicitudes de Alquiler</span>
+            {pendingRentalsCount > 0 ? (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-500 text-stone-950 animate-pulse">
+                {pendingRentalsCount} pend.
+              </span>
+            ) : (
+              <span className="text-[10px] bg-stone-800 text-stone-400 px-1.5 py-0.2 rounded font-mono">
+                {rentalRequests.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('machinery-brands')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === 'machinery-brands'
+                ? 'border-yellow-400 text-white'
+                : 'border-transparent text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            <Award className="w-3.5 h-3.5 text-amber-400" />
+            <span>Marcas de Maquinaria ({machineryBrands.length})</span>
+          </button>
+          <button
             onClick={() => setActiveTab('categories')}
             className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors ${
               activeTab === 'categories'
@@ -438,7 +530,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 : 'border-transparent text-stone-400 hover:text-stone-200'
             }`}
           >
-            Categorías y Líneas ({categories.length})
+            Categorías ({categories.filter((c) => c.parentId === null).length})
           </button>
           <button
             onClick={() => setActiveTab('brands')}
@@ -448,7 +540,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 : 'border-transparent text-stone-400 hover:text-stone-200'
             }`}
           >
-            Gestión de Marcas ({brands.length})
+            Marcas de Materiales ({brands.length})
           </button>
 
           {/* User & Profile management RESTRICTED TO ADMIN ONLY */}
@@ -597,18 +689,17 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               <table className="w-full text-left text-xs">
                 <thead className="bg-stone-50 border-b border-stone-200 text-stone-500 font-semibold uppercase tracking-wider text-[11px]">
                   <tr>
-                    <th className="py-3 px-4">Material (Nombre Concatenado)</th>
+                    <th className="py-3 px-4">Material (Nombre Comercial / Técnico)</th>
                     <th className="py-3 px-4">Categoría</th>
                     <th className="py-3 px-4">Marca</th>
                     <th className="py-3 px-4">Presentación</th>
-                    <th className="py-3 px-4">Precio Lista</th>
+                    <th className="py-3 px-4">Unidad / Despacho</th>
                     <th className="py-3 px-4 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
                   {filteredProducts.map((p) => {
                     const cat = categories.find((c) => c.id === p.categoryId);
-                    const hasPrice = p.price !== undefined && p.price !== null && p.price > 0;
 
                     return (
                       <tr key={p.id} className="hover:bg-stone-50/70 transition-colors">
@@ -632,20 +723,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          {hasPrice ? (
-                            <>
-                              <span className="font-black text-stone-900 tabular-nums">
-                                {formatCurrency(p.price!, p.currency)}
-                              </span>
-                              <span className="text-[10px] text-stone-400 block font-normal">
-                                /{p.unit || 'unidad'}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-amber-800 font-semibold text-[11px]">
-                              A Cotizar
-                            </span>
-                          )}
+                          <span className="font-bold text-stone-900 text-xs">
+                            {p.unit || 'unidad'}
+                          </span>
+                          <span className="text-[10px] text-stone-400 block font-normal">
+                            Directo a obra
+                          </span>
                         </td>
                         <td className="py-3 px-4 text-right whitespace-nowrap">
                           <div className="inline-flex items-center gap-1.5">
@@ -684,7 +767,217 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           </div>
         )}
 
-        {/* TAB 2: CATEGORIES & SUBCATEGORIES (Full CRUD: Create, Read, Update, Delete) */}
+        {/* TAB: ALQUILER DE MAQUINARIA (Flota pesada y tarifas de gestión) */}
+        {activeTab === 'machinery' && (
+          <div className="space-y-6">
+            {/* Header & New Machine CTA */}
+            <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-base text-stone-900 flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-amber-600" />
+                  <span>Flota de Maquinaria Pesada & Equipos en Alquiler</span>
+                </h3>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Gestión integral de equipos para movimiento de tierras, concreto y transporte. Las tarifas registradas aquí son internas para gestión y se omiten para clientes públicos.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setEditingMachinery(null);
+                  setIsMachineryModalOpen(true);
+                }}
+                className="px-4 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-stone-950 text-xs font-bold rounded-xl flex items-center gap-2 shadow-xs transition-colors shrink-0 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Registrar Nueva Máquina</span>
+              </button>
+            </div>
+
+            {/* Machinery Search & Category Filter Toolbar */}
+            <div className="bg-white rounded-2xl border border-stone-200 p-4 shadow-xs flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                <input
+                  type="text"
+                  value={machinerySearch}
+                  onChange={(e) => setMachinerySearch(e.target.value)}
+                  placeholder="Buscar equipo por nombre, marca o modelo (ej: Caterpillar, Bobcat, Trompo)..."
+                  className="w-full text-xs pl-9 pr-3 py-2 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                />
+                {machinerySearch && (
+                  <button
+                    onClick={() => setMachinerySearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-stone-400 hover:text-stone-600"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+
+              <select
+                value={machineryCategoryFilter}
+                onChange={(e) => setMachineryCategoryFilter(e.target.value)}
+                className="text-xs font-semibold px-3 py-2 rounded-xl border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              >
+                <option value="all">Todas las Categorías ({machineries.length})</option>
+                <option value="pesada">Maquinaria Pesada</option>
+                <option value="liviana">Maquinaria Liviana</option>
+                <option value="concreto">Equipos de Concreto</option>
+                <option value="compactacion">Compactación & Suelos</option>
+                <option value="transporte">Transporte & Volquetes</option>
+                <option value="demolicion_energia">Demolición & Energía</option>
+              </select>
+            </div>
+
+            {/* Machinery Table */}
+            <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-stone-50 border-b border-stone-200 text-stone-500 font-semibold uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th className="px-4 py-3">Equipo & Especificaciones</th>
+                      <th className="px-4 py-3">Categoría</th>
+                      <th className="px-4 py-3">Energía & Mínimo</th>
+                      <th className="px-4 py-3">Operador</th>
+                      <th className="px-4 py-3">Estado</th>
+                      <th className="px-4 py-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {filteredAdminMachinery.length > 0 ? (
+                      filteredAdminMachinery.map((mach) => (
+                        <tr key={mach.id} className="hover:bg-stone-50/70 transition-colors">
+                          {/* Machine name & image */}
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={mach.imageUrl}
+                                alt={mach.name}
+                                className="w-14 h-14 rounded-xl object-cover bg-stone-100 border border-stone-200 shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <span className="font-bold text-stone-900 block text-xs truncate max-w-xs">
+                                  {mach.name}
+                                </span>
+                                <div className="text-[11px] text-stone-500 flex items-center gap-1.5 mt-0.5 font-mono">
+                                  <span className="font-semibold text-amber-900">{mach.brand}</span>
+                                  <span>·</span>
+                                  <span>Mod: {mach.model}</span>
+                                  {mach.year && (
+                                    <>
+                                      <span>·</span>
+                                      <span>Año {mach.year}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-stone-400 mt-0.5">
+                                  {mach.powerHp && <span>{mach.powerHp} </span>}
+                                  {mach.capacity && <span>· {mach.capacity}</span>}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Category */}
+                          <td className="px-4 py-3.5">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-stone-100 text-stone-700">
+                              {mach.categoryName}
+                            </span>
+                          </td>
+
+                          {/* Energy & Minimum Rental (No prices displayed) */}
+                          <td className="px-4 py-3.5">
+                            <div className="space-y-0.5 text-[11px]">
+                              <span className="font-bold text-stone-900 block">
+                                {mach.fuelType || 'Diesel'}
+                              </span>
+                              <span className="text-stone-500 font-mono text-[10px]">
+                                {mach.minRentalHours || 8} hrs mínimas
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Operator */}
+                          <td className="px-4 py-3.5">
+                            {mach.includesOperator ? (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Con Operador</span>
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-stone-500">Solo Equipo</span>
+                            )}
+                          </td>
+
+                          {/* Status */}
+                          <td className="px-4 py-3.5">
+                            {mach.status === 'available' ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                <span>Disponible</span>
+                              </span>
+                            ) : mach.status === 'rented' ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                                <span>En Obra</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-700">
+                                <span>Mantenimiento</span>
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-4 py-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => {
+                                  setEditingMachinery(mach);
+                                  setIsMachineryModalOpen(true);
+                                }}
+                                className="p-1.5 text-stone-500 hover:text-amber-700 hover:bg-stone-100 rounded-lg cursor-pointer"
+                                title="Editar maquinaria"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setMachineryToDelete(mach)}
+                                className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                                title="Eliminar de la flota"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-10 text-center text-stone-400">
+                          No se encontraron máquinas con esos criterios.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: RENTAL APPLICATIONS MANAGEMENT & CALENDAR */}
+        {activeTab === 'rentals' && (
+          <MachineryRentalManagement />
+        )}
+
+        {/* TAB: MACHINERY BRANDS MANAGEMENT */}
+        {activeTab === 'machinery-brands' && (
+          <MachineryBrandManagement />
+        )}
+
+        {/* TAB 2: CATEGORIES (Full CRUD: Create, Read, Update, Delete) */}
         {activeTab === 'categories' && (
           <div className="space-y-6">
             {/* Create / Edit Category Bar */}
@@ -752,8 +1045,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   <div className="flex items-center justify-between border-b border-stone-200 pb-2">
                     <span className="text-xs font-bold text-stone-900">
                       {editingCategory
-                        ? (catParentId !== 'none' ? `Editar Sub Categoria: ${editingCategory.name}` : `Editar Categoría: ${editingCategory.name}`)
-                        : (catParentId !== 'none' ? 'Registrar Nueva Sub Categoria' : 'Registrar Nueva Categoría Principal')}
+                        ? `Editar Categoría: ${editingCategory.name}`
+                        : 'Registrar Nueva Categoría Principal'}
                     </span>
                     <button
                       type="button"
@@ -768,43 +1061,19 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                        {catParentId !== 'none' ? 'Sub Categoria *' : 'Nombre de la categoría *'}
+                        Nombre de la Categoría *
                       </label>
                       <input
                         type="text"
                         required
                         value={catName}
                         onChange={(e) => setCatName(e.target.value)}
-                        placeholder={
-                          catParentId !== 'none'
-                            ? 'Ej: Fierro Corrugado 1/2", King Kong 18 Huecos...'
-                            : 'Ej: Aceros, Mallas, Cemento Sol...'
-                        }
+                        placeholder="Ej: Aceros y Varillas, Cemento Sol, Ladrillos..."
                         className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white"
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                        Jerarquía / Categoría Padre
-                      </label>
-                      <select
-                        value={catParentId}
-                        onChange={(e) => setCatParentId(e.target.value)}
-                        className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white"
-                      >
-                        <option value="none">-- Es una Categoría Principal --</option>
-                        {categories
-                          .filter((c) => c.parentId === null && (editingCategory ? c.id !== editingCategory.id : true))
-                          .map((c) => (
-                            <option key={c.id} value={c.id}>
-                              Subcategoría de: {c.name}
-                            </option>
-                          ))}
-                      </select>
                     </div>
 
                     <div>
@@ -954,16 +1223,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                           </span>
                         </div>
 
-                        {/* Actions for Parent Category */}
+                        {/* Actions for Category */}
                         <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            onClick={() => handleStartAddSubcategory(cat.id)}
-                            className="px-2 py-1 bg-yellow-50 hover:bg-yellow-100 text-amber-900 text-[11px] font-semibold rounded-lg flex items-center gap-1 transition-colors"
-                            title="Agregar subcategoría a esta familia"
-                          >
-                            <Plus className="w-3 h-3" />
-                            <span>Subcategoría</span>
-                          </button>
                           <button
                             onClick={() => handleStartEditCategory(cat)}
                             className="p-1.5 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition-colors"
@@ -1001,72 +1262,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                           </div>
                         </div>
                       )}
-
-                      {/* Subcategories list */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
-                            Subcategorías vinculadas ({subcats.length})
-                          </span>
-                          <button
-                            onClick={() => handleStartAddSubcategory(cat.id)}
-                            className="text-[11px] text-amber-800 hover:underline font-semibold flex items-center gap-0.5"
-                          >
-                            <Plus className="w-3 h-3" />
-                            <span>Nueva</span>
-                          </button>
-                        </div>
-
-                        {subcats.length > 0 ? (
-                          <div className="space-y-1.5">
-                            {subcats.map((sub) => {
-                              const subCount = products.filter((p) => p.subcategoryId === sub.id).length;
-                              return (
-                                <div
-                                  key={sub.id}
-                                  className="flex items-center justify-between bg-stone-50 hover:bg-stone-100/80 p-2 rounded-xl border border-stone-200/80 text-xs transition-colors"
-                                >
-                                  <div>
-                                    <span className="font-semibold text-stone-900">{sub.name}</span>
-                                    <span className="text-[10px] text-stone-400 ml-2 font-mono">
-                                      {subCount} material(es)
-                                    </span>
-                                  </div>
-
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      onClick={() => handleStartEditCategory(sub)}
-                                      className="p-1 text-stone-400 hover:text-stone-700 rounded hover:bg-stone-200"
-                                      title="Editar subcategoría"
-                                    >
-                                      <Edit2 className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                      onClick={() => deleteCategory(sub.id)}
-                                      className="p-1 text-stone-400 hover:text-red-600 rounded hover:bg-red-50"
-                                      title="Eliminar subcategoría"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="p-3 bg-stone-50 rounded-xl border border-dashed border-stone-200 text-center">
-                            <span className="text-xs text-stone-400 italic block mb-1">
-                              Sin subcategorías específicas en esta línea
-                            </span>
-                            <button
-                              onClick={() => handleStartAddSubcategory(cat.id)}
-                              className="text-[11px] text-amber-800 font-bold hover:underline"
-                            >
-                              + Crear primera subcategoría
-                            </button>
-                          </div>
-                        )}
-                      </div>
                     </div>
                   );
                 })}
@@ -1815,7 +2010,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               <button
                 onClick={() => {
-                  downloadFullCatalogPdf(products, categories);
+                  downloadFullCatalogPdf(products, categories, true);
                   showToast('Descargando PDF del Catálogo General');
                 }}
                 className="w-full sm:w-auto px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-stone-950 rounded-xl font-bold text-xs flex items-center justify-center gap-2"
@@ -1853,6 +2048,44 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         />
       )}
 
+      {/* Machinery Form Modal (Create / Edit) */}
+      {isMachineryModalOpen && (
+        <MachineryFormModal
+          isOpen={isMachineryModalOpen}
+          machinery={editingMachinery}
+          onClose={() => {
+            setIsMachineryModalOpen(false);
+            setEditingMachinery(null);
+          }}
+        />
+      )}
+
+      {/* Delete Machinery Confirmation Dialog */}
+      {machineryToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <h4 className="font-bold text-stone-900">¿Eliminar este equipo?</h4>
+            <p className="text-xs text-stone-600">
+              Se retirará <strong>{machineryToDelete.name}</strong> de la flota de maquinaria en alquiler.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setMachineryToDelete(null)}
+                className="px-3 py-1.5 text-xs text-stone-600 rounded-lg hover:bg-stone-100 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDeleteMachinery}
+                className="px-4 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg cursor-pointer"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Dialog */}
       {productToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/60 backdrop-blur-xs">
@@ -1864,13 +2097,13 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => setProductToDelete(null)}
-                className="px-3 py-1.5 text-xs text-stone-600 rounded-lg hover:bg-stone-100"
+                className="px-3 py-1.5 text-xs text-stone-600 rounded-lg hover:bg-stone-100 cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={confirmDeleteProduct}
-                className="px-4 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg"
+                className="px-4 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg cursor-pointer"
               >
                 Eliminar
               </button>

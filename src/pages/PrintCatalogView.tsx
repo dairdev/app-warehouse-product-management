@@ -9,7 +9,8 @@ interface PrintCatalogViewProps {
 }
 
 export const PrintCatalogView: React.FC<PrintCatalogViewProps> = ({ onBack }) => {
-  const { products, categories, storeSettings } = useStore();
+  const { products, categories, storeSettings, currentUser, isAdmin } = useStore();
+  const isManager = isAdmin() || currentUser?.role === 'staff';
 
   const parentCategories = categories.filter((c) => c.parentId === null);
 
@@ -142,11 +143,13 @@ export const PrintCatalogView: React.FC<PrintCatalogViewProps> = ({ onBack }) =>
                             </>
                           )}
                         </div>
-                        <h3 className="text-base font-bold text-stone-950">{prod.name}</h3>
+                        <h3 className="text-base font-bold text-stone-950">
+                          {prod.name}{prod.unit && !prod.name.toLowerCase().includes(prod.unit.toLowerCase()) ? ` (${prod.unit})` : ''}
+                        </h3>
                       </div>
                       <div className="text-right">
-                        <span className="text-base font-black text-amber-900 tabular-nums">
-                          {formatCurrency(prod.price, prod.currency)}
+                        <span className="text-xs font-bold text-stone-900 block">
+                          A Cotizar Directo a Obra
                         </span>
                         {prod.unit && <span className="text-[11px] text-stone-500 block">por {prod.unit}</span>}
                       </div>

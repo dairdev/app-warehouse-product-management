@@ -5,8 +5,11 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  password?: string;
   phone?: string;
   company?: string;
+  avatarUrl?: string;
+  authProvider?: 'email' | 'google';
   createdAt: string;
   updatedAt: string;
 }
@@ -18,6 +21,42 @@ export interface Brand {
   description?: string;
   origin?: string;
   logoUrl?: string;
+}
+
+export interface MachineryBrand {
+  id: string;
+  name: string;
+  slug: string;
+  origin?: string;
+  description?: string;
+  logoUrl?: string;
+}
+
+export type RentalRequestStatus = 'pending' | 'approved' | 'rejected' | 'completed';
+
+export interface MachineryRentalRequest {
+  id: string;
+  machineryId: string;
+  machineryName: string;
+  machineryBrand?: string;
+  machineryModel?: string;
+  machineryImageUrl?: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  obraLocation: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  startHour?: string; // e.g. "08:00"
+  endHour?: string; // e.g. "17:00"
+  totalHoursOrDays?: string;
+  needsOperator: boolean;
+  status: RentalRequestStatus;
+  notes?: string;
+  createdBy: 'client' | 'admin';
+  approvedBy?: string;
+  approvedAt?: string;
+  createdAt: string;
 }
 
 export interface Category {
@@ -65,7 +104,7 @@ export interface Product {
   brandId?: string;
   brandName?: string;
   presentation?: string;
-  price?: number | null; // Optional
+  price?: number | null; // Optional - only shown to management
   currency: 'PEN' | 'USD';
   unit?: string; // e.g. 'bolsa', 'millar', 'm³', 'varilla', 'rollo', 'panel'
   sku?: string; // Optional
@@ -73,6 +112,46 @@ export interface Product {
   attributes: ProductAttribute[];
   media: ProductMedia[];
   tags: string[]; // tag slugs
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MachineryCategory =
+  | 'pesada'
+  | 'liviana'
+  | 'concreto'
+  | 'compactacion'
+  | 'transporte'
+  | 'demolicion_energia';
+
+export interface Machinery {
+  id: string;
+  name: string;
+  slug: string;
+  category: MachineryCategory;
+  categoryName: string;
+  brand: string;
+  model: string;
+  description: string;
+  year?: number;
+  powerHp?: string;
+  capacity?: string;
+  operatingWeight?: string;
+  fuelType?: 'Diesel' | 'Gasolina' | 'Eléctrico' | 'Bifásico/Trifásico';
+  imageUrl: string;
+  galleryImages?: string[];
+  // Pricing: for management only!
+  hourlyRate?: number | null;
+  dailyRate?: number | null;
+  monthlyRate?: number | null;
+  currency: 'PEN' | 'USD';
+  minRentalHours?: number;
+  includesOperator?: boolean;
+  operatorDetails?: string;
+  deliveryConditions?: string;
+  status: 'available' | 'rented' | 'maintenance';
+  technicalSpecs?: { key: string; value: string }[];
+  featured?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -12,7 +12,7 @@ export const printDatasheetOrCatalog = () => {
 /**
  * Generate and download a single product technical datasheet PDF using jsPDF
  */
-export const downloadProductPdf = (product: Product, categoryName: string) => {
+export const downloadProductPdf = (product: Product, categoryName: string, isManager: boolean = false) => {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -49,14 +49,15 @@ export const downloadProductPdf = (product: Product, categoryName: string) => {
   doc.setTextColor(100, 116, 139); // slate-500
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${categoryName.toUpperCase()} · SKU: ${product.sku}`, margin, y);
+  doc.text(`${categoryName.toUpperCase()} · SKU: ${product.sku || 'N/A'}`, margin, y);
   y += 6;
 
-  // Product Title
+  // Product Title (with unit)
+  const fullTitle = `${product.name}${product.unit && !product.name.toLowerCase().includes(product.unit.toLowerCase()) ? ` (${product.unit})` : ''}`;
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  const titleLines = doc.splitTextToSize(product.name, contentWidth);
+  const titleLines = doc.splitTextToSize(fullTitle, contentWidth);
   doc.text(titleLines, margin, y);
   y += titleLines.length * 7 + 4;
 
@@ -68,21 +69,19 @@ export const downloadProductPdf = (product: Product, categoryName: string) => {
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(71, 85, 105);
-  doc.text('Precio Referencial de Venta:', margin + 4, y + 7);
+  doc.text('Condición Comercial / Venta:', margin + 4, y + 7);
   const brandPres = [
     product.brandName ? `Marca: ${product.brandName}` : null,
     product.presentation ? `Presentación: ${product.presentation}` : null,
+    product.unit ? `Unidad: ${product.unit}` : null,
   ].filter(Boolean).join('  |  ');
-  doc.text(brandPres || 'Material para construcción', margin + 4, y + 13);
+  doc.text(brandPres || 'Material para construcción civil', margin + 4, y + 13);
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
+  doc.setFontSize(12);
   doc.setTextColor(180, 83, 9); // amber-700
-  const priceDisplay = product.price !== undefined && product.price !== null
-    ? `${formatCurrency(product.price, product.currency)}${product.unit ? ` por ${product.unit}` : ''}`
-    : 'Precio a cotizar';
   doc.text(
-    priceDisplay,
+    'Cotización directa para obra',
     pageWidth - margin - 4,
     y + 11,
     { align: 'right' }
@@ -190,7 +189,7 @@ export const downloadProductPdf = (product: Product, categoryName: string) => {
 /**
  * Generate full catalog PDF using jsPDF
  */
-export const downloadFullCatalogPdf = (products: Product[], categories: Category[]) => {
+export const downloadFullCatalogPdf = (products: Product[], categories: Category[], isManager: boolean = false) => {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -303,11 +302,12 @@ export const downloadFullCatalogPdf = (products: Product[], categories: Category
     doc.setDrawColor(226, 232, 240);
     doc.roundedRect(margin, curY, contentWidth, 38, 2, 2, 'FD');
 
-    // Title & SKU
+    // Title & SKU (with unit)
+    const fullProdTitle = `${idx + 1}. ${product.name}${product.unit && !product.name.toLowerCase().includes(product.unit.toLowerCase()) ? ` (${product.unit})` : ''}`;
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text(`${idx + 1}. ${product.name}`, margin + 4, curY + 7);
+    doc.text(fullProdTitle, margin + 4, curY + 7);
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
@@ -316,6 +316,7 @@ export const downloadFullCatalogPdf = (products: Product[], categories: Category
       `Categoría: ${cat?.name || 'General'}`,
       product.brandName ? `Marca: ${product.brandName}` : null,
       product.presentation ? `Presentación: ${product.presentation}` : null,
+      product.unit ? `Unidad: ${product.unit}` : null,
       product.sku ? `SKU: ${product.sku}` : null,
     ].filter(Boolean).join('  |  ');
     doc.text(metaParts, margin + 4, curY + 12);
@@ -334,25 +335,22 @@ export const downloadFullCatalogPdf = (products: Product[], categories: Category
       doc.text(`Especificaciones: ${topAttr}`, margin + 4, curY + 31);
     }
 
-    // Price Pill
+    // Dispatch condition pill
     doc.setFillColor(254, 249, 195); // yellow-100
-    doc.roundedRect(pageWidth - margin - 42, curY + 5, 38, 14, 2, 2, 'F');
-    doc.setFontSize(9.5);
+    doc.roundedRect(pageWidth - margin - 46, curY + 5, 42, 14, 2, 2, 'F');
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(161, 98, 7);
-    const catalogPriceText = product.price !== undefined && product.price !== null
-      ? formatCurrency(product.price, product.currency)
-      : 'A cotizar';
     doc.text(
-      catalogPriceText,
-      pageWidth - margin - 23,
+      'A cotizar obra',
+      pageWidth - margin - 25,
       curY + 11,
       { align: 'center' }
     );
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(113, 63, 18);
-    doc.text(product.unit ? `por ${product.unit}` : '', pageWidth - margin - 23, curY + 16, { align: 'center' });
+    doc.text(product.unit ? `por ${product.unit}` : 'directo a obra', pageWidth - margin - 25, curY + 16, { align: 'center' });
 
     curY += 43;
   });

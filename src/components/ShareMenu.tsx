@@ -6,7 +6,6 @@ import {
   getTelegramShareUrl,
   getEmailShareUrl,
   STORE_INFO,
-  formatCurrency,
 } from '../utils/shareUtils';
 import { downloadProductPdf } from '../utils/pdfExport';
 import { getMediaUrl } from '../utils/mediaUtils';
@@ -110,7 +109,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ product, onClose }) => {
               </span>
               <p className="text-sm font-bold text-stone-900 truncate">{product.name}</p>
               <p className="text-xs font-semibold text-amber-800">
-                {formatCurrency(product.price, product.currency)} {product.unit ? `por ${product.unit}` : ''}
+                Cotización directa a obra {product.unit ? `por ${product.unit}` : ''}
               </p>
             </div>
           </div>

@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Product, Category } from '../types';
 import { ProductCard } from '../components/ProductCard';
+import { MachineryRentModule } from '../components/MachineryRentModule';
 import {
   Search,
   SlidersHorizontal,
@@ -14,6 +15,8 @@ import {
   Layers,
   ChevronRight,
   Sparkles,
+  Truck,
+  Wrench,
 } from 'lucide-react';
 import { downloadFullCatalogPdf } from '../utils/pdfExport';
 import { STORE_INFO, formatCurrency } from '../utils/shareUtils';
@@ -24,6 +27,8 @@ interface CatalogViewProps {
   onOpenTagModal: (product: Product) => void;
   onNavigateToClientProfile: () => void;
   onPrintCatalog: () => void;
+  initialLandingSection?: 'materials' | 'machinery';
+  onSectionChange?: (section: 'materials' | 'machinery') => void;
 }
 
 export const CatalogView: React.FC<CatalogViewProps> = ({
@@ -32,16 +37,31 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   onOpenTagModal,
   onNavigateToClientProfile,
   onPrintCatalog,
+  initialLandingSection = 'materials',
+  onSectionChange,
 }) => {
-  const { products, categories, brands, tags, storeSettings, showToast } = useStore();
+  const { products, categories, brands, tags, machineries, storeSettings, currentUser, isAdmin, showToast } = useStore();
+  const isManager = isAdmin() || currentUser?.role === 'staff';
+
+  const [activeLandingSection, setActiveLandingSection] = useState<'materials' | 'machinery'>(
+    initialLandingSection
+  );
+
+  useEffect(() => {
+    setActiveLandingSection(initialLandingSection);
+  }, [initialLandingSection]);
+
+  const handleSwitchSection = (section: 'materials' | 'machinery') => {
+    setActiveLandingSection(section);
+    if (onSectionChange) onSectionChange(section);
+  };
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedParentCategory, setSelectedParentCategory] = useState<string>('all');
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'name'>('featured');
+  const [sortBy, setSortBy] = useState<'featured' | 'name'>('featured');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // Parent Categories
@@ -49,14 +69,6 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     () => categories.filter((c) => c.parentId === null).sort((a, b) => a.sortOrder - b.sortOrder),
     [categories]
   );
-
-  // Subcategories for selected parent
-  const subcategoriesForSelectedParent = useMemo(() => {
-    if (selectedParentCategory === 'all') return [];
-    return categories
-      .filter((c) => c.parentId === selectedParentCategory)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
-  }, [categories, selectedParentCategory]);
 
   // Filtered & Sorted Products
   const filteredProducts = useMemo(() => {
@@ -82,11 +94,6 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
         if (product.categoryId !== selectedParentCategory) return false;
       }
 
-      // Subcategory
-      if (selectedSubcategory !== 'all') {
-        if (product.subcategoryId !== selectedSubcategory) return false;
-      }
-
       // Brand
       if (selectedBrand !== 'all') {
         if (product.brandId !== selectedBrand) return false;
@@ -99,22 +106,18 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
       return true;
     }).sort((a, b) => {
-      const priceA = a.price ?? 999999;
-      const priceB = b.price ?? 999999;
-      if (sortBy === 'price-asc') return priceA - priceB;
-      if (sortBy === 'price-desc') return priceB - priceA;
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       // default: featured first
       if (a.featured && !b.featured) return -1;
       if (!a.featured && b.featured) return 1;
       return 0;
     });
-  }, [products, searchQuery, selectedParentCategory, selectedSubcategory, selectedBrand, selectedTag, sortBy]);
+  }, [products, searchQuery, selectedParentCategory, selectedBrand, selectedTag, sortBy]);
 
   const handleExportFullPdf = () => {
     setIsExportingPdf(true);
     try {
-      downloadFullCatalogPdf(filteredProducts, categories);
+      downloadFullCatalogPdf(filteredProducts, categories, isManager);
       showToast('Catálogo general descargado en PDF');
     } catch (e) {
       showToast('Error al generar el PDF', 'error');
@@ -125,7 +128,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
   return (
     <div className="min-h-screen bg-stone-50 pb-20">
-      {/* Hero Section (Focal anchor, clean industrial aesthetic, yellow accent) */}
+      {/* Hero Section (Dual-Service Awareness: Materials Store & Machinery Rental) */}
       <section className="bg-stone-900 text-white border-b border-stone-800 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
 
@@ -133,177 +136,253 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-stone-800/90 text-yellow-400 text-xs font-semibold uppercase tracking-wider mb-4 border border-stone-700">
               <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
-              <span>{storeSettings.catalogHeaderBadge || 'Distribución Mayorista & Menorista Directo a Obra'}</span>
+              <span>
+                {activeLandingSection === 'materials'
+                  ? storeSettings.catalogHeaderBadge || 'Distribución Mayorista Directo a Obra & Alquiler de Maquinaria'
+                  : 'Flota Pesada & Equipos Certificados con Operador'}
+              </span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4 leading-tight">
-              {storeSettings.catalogHeaderTitle || 'Materiales de Construcción Pesada & Fichas Técnicas'}
+              {activeLandingSection === 'materials'
+                ? storeSettings.catalogHeaderTitle || 'Materiales de Construcción Pesada & Fichas Técnicas'
+                : 'Alquiler de Maquinaria Pesada & Equipos de Obra'}
             </h1>
 
-            <p className="text-stone-300 text-sm sm:text-base leading-relaxed mb-6 font-normal">
-              {storeSettings.catalogHeaderSubtitle || 'Consulte especificaciones certificadas (NTP / ASTM), medidas, pesos y precios vigentes en cementos, ladrillos, fierro corrugado, arenas y gravas. Descargue fichas o solicite flete inmediato a pie de obra.'}
+            <p className="text-stone-300 text-sm sm:text-base leading-relaxed font-normal">
+              {activeLandingSection === 'materials'
+                ? storeSettings.catalogHeaderSubtitle ||
+                  'Consulte especificaciones certificadas (NTP / ASTM), medidas, pesos y gestión de abastecimiento en cementos, ladrillos, fierro corrugado, arenas y gravas. Descargue fichas o solicite flete inmediato a pie de obra.'
+                : 'Flota moderna de retroexcavadoras 4x4, minicargadores Bobcat, camiones volquetes de 15 m³ y mezcladoras de concreto. Tarifas flexibles por hora, día o mes con operador homologado y seguro SCTR.'}
             </p>
-
-            {/* Action Bar */}
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={handleExportFullPdf}
-                disabled={isExportingPdf}
-                className="px-4 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-stone-950 text-xs sm:text-sm font-bold rounded-xl shadow-sm transition-colors flex items-center gap-2"
-              >
-                <FileDown className="w-4 h-4 text-stone-950" />
-                <span>{isExportingPdf ? 'Generando PDF...' : 'Descargar Catálogo Completo (PDF)'}</span>
-              </button>
-
-              <button
-                onClick={onPrintCatalog}
-                className="px-4 py-2.5 bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs sm:text-sm font-semibold rounded-xl border border-stone-700 transition-colors flex items-center gap-2"
-              >
-                <Printer className="w-4 h-4 text-stone-400" />
-                <span>Vista Imprimible / A4</span>
-              </button>
-
-              <a
-                href={`https://wa.me/${storeSettings.whatsappNumber}?text=${encodeURIComponent(
-                  `Hola ${storeSettings.name}, deseo consultar precios por volumen y programación de despacho a obra.`
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2.5 bg-emerald-600/90 hover:bg-emerald-600 text-white text-xs sm:text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
-              >
-                <PhoneCall className="w-4 h-4" />
-                <span>Cotización Inmediata por WhatsApp</span>
-              </a>
-            </div>
           </div>
         </div>
       </section>
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20">
-        {/* Search & Filter Toolbar Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sm:p-5 mb-8 space-y-4">
-          {/* Top row: Search input & Sort dropdown */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar por material, SKU, resistencia o características (ej: Cemento Tipo I, 1/2, King Kong)..."
-                className="w-full text-sm pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-stone-50/50"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 hover:text-stone-600 font-medium"
-                >
-                  Limpiar
-                </button>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {/* Brand Filter */}
-              <select
-                value={selectedBrand}
-                onChange={(e) => setSelectedBrand(e.target.value)}
-                className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-              >
-                <option value="all">Todas las Marcas</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
-              >
-                <option value="featured">Destacados para obra</option>
-                <option value="price-asc">Precio: Menor a Mayor</option>
-                <option value="price-desc">Precio: Mayor a Menor</option>
-                <option value="name">Alfabético (A-Z)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Interactive Category Tabs (Segmented control buttons) */}
-          <div className="pt-2 border-t border-stone-100">
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-              <button
-                onClick={() => {
-                  setSelectedParentCategory('all');
-                  setSelectedSubcategory('all');
-                }}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${
-                  selectedParentCategory === 'all'
-                    ? 'bg-stone-900 text-white shadow-xs'
-                    : 'text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200/70'
-                }`}
-              >
-                Todos los Materiales ({products.length})
-              </button>
-
-              {parentCategories.map((cat) => {
-                const count = products.filter((p) => p.categoryId === cat.id).length;
-                const isActive = selectedParentCategory === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      setSelectedParentCategory(cat.id);
-                      setSelectedSubcategory('all');
-                    }}
-                    className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                      isActive
-                        ? 'bg-yellow-400 text-stone-950 shadow-xs'
-                        : 'text-stone-700 hover:text-stone-950 bg-stone-100 hover:bg-stone-200/70'
+        {/* Landing Page Dual-Pillar Service Navigation (High Visibility & Clear Differentiation) */}
+        <div className="bg-stone-900/95 backdrop-blur-md p-3 sm:p-4 rounded-3xl border-2 border-stone-800 shadow-2xl mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {/* PILLAR 1: TIENDA DE MATERIALES */}
+            <button
+              onClick={() => handleSwitchSection('materials')}
+              className={`p-4 sm:p-5 rounded-2xl text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
+                activeLandingSection === 'materials'
+                  ? 'bg-yellow-400 text-stone-950 shadow-xl ring-4 ring-yellow-400/40 scale-[1.01]'
+                  : 'bg-stone-950/80 hover:bg-stone-800 text-stone-200 border border-stone-700/80 hover:border-yellow-400/70 hover:shadow-lg'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                      activeLandingSection === 'materials'
+                        ? 'bg-stone-950 text-yellow-400 shadow-md'
+                        : 'bg-stone-800 text-stone-300'
                     }`}
                   >
-                    <span>{cat.name}</span>
-                    <span className="text-[10px] opacity-75 font-normal">({count})</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                    <Package className="w-6 h-6 stroke-[2.2]" />
+                  </div>
+                  <div>
+                    <span
+                      className={`text-[10px] font-black uppercase tracking-wider block ${
+                        activeLandingSection === 'materials' ? 'text-stone-800' : 'text-stone-400'
+                      }`}
+                    >
+                      Venta & Despacho a Pie de Obra
+                    </span>
+                    <h2
+                      className={`text-lg sm:text-xl font-black tracking-tight ${
+                        activeLandingSection === 'materials' ? 'text-stone-950' : 'text-white'
+                      }`}
+                    >
+                      Tienda de Materiales
+                    </h2>
+                  </div>
+                </div>
 
-          {/* Subcategory row (if parent selected) */}
-          {subcategoriesForSelectedParent.length > 0 && (
-            <div className="pt-2 border-t border-stone-100 flex items-center gap-2 overflow-x-auto text-xs">
-              <span className="text-stone-400 text-[11px] font-semibold uppercase tracking-wider shrink-0">
-                Subcategoría:
-              </span>
-              <button
-                onClick={() => setSelectedSubcategory('all')}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                  selectedSubcategory === 'all'
-                    ? 'bg-stone-800 text-white'
-                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                <div className="flex flex-col items-end shrink-0">
+                  <span
+                    className={`px-2.5 py-1 rounded-lg text-xs font-black tabular-nums ${
+                      activeLandingSection === 'materials'
+                        ? 'bg-stone-950 text-yellow-400'
+                        : 'bg-stone-800 text-stone-300 border border-stone-700'
+                    }`}
+                  >
+                    {products.length} Materiales
+                  </span>
+                  {activeLandingSection === 'materials' && (
+                    <span className="text-[10px] font-black text-amber-950 uppercase tracking-widest mt-1 flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                      ACTIVO AHORA
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <p
+                className={`text-xs sm:text-xs leading-relaxed mt-1 font-medium ${
+                  activeLandingSection === 'materials' ? 'text-stone-800' : 'text-stone-400'
                 }`}
               >
-                Todas
-              </button>
-              {subcategoriesForSelectedParent.map((sub) => (
-                <button
-                  key={sub.id}
-                  onClick={() => setSelectedSubcategory(sub.id)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
-                    selectedSubcategory === sub.id
-                      ? 'bg-stone-800 text-white'
-                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                  }`}
-                >
-                  {sub.name}
-                </button>
-              ))}
-            </div>
-          )}
+                Cementos, Fierros corrugados, Ladrillos King Kong, Mallas electrosoldadas, Arenas y Gravas. Fichas técnicas certificadas.
+              </p>
+            </button>
+
+            {/* PILLAR 2: ALQUILER DE MATERIALES / MAQUINARIA */}
+            <button
+              onClick={() => handleSwitchSection('machinery')}
+              className={`p-4 sm:p-5 rounded-2xl text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
+                activeLandingSection === 'machinery'
+                  ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-xl ring-4 ring-amber-500/40 scale-[1.01]'
+                  : 'bg-stone-950/80 hover:bg-stone-800 text-stone-200 border border-stone-700/80 hover:border-amber-500/70 hover:shadow-lg'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                      activeLandingSection === 'machinery'
+                        ? 'bg-stone-950 text-yellow-400 shadow-md'
+                        : 'bg-stone-800 text-amber-400'
+                    }`}
+                  >
+                    <Truck className="w-6 h-6 stroke-[2.2]" />
+                  </div>
+                  <div>
+                    <span
+                      className={`text-[10px] font-black uppercase tracking-wider block ${
+                        activeLandingSection === 'machinery' ? 'text-amber-100' : 'text-amber-400'
+                      }`}
+                    >
+                      Flota Pesada & Equipos en Obra
+                    </span>
+                    <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
+                      Alquiler de Materiales & Maquinaria
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end shrink-0">
+                  <span
+                    className={`px-2.5 py-1 rounded-lg text-xs font-black tabular-nums ${
+                      activeLandingSection === 'machinery'
+                        ? 'bg-stone-950 text-yellow-400'
+                        : 'bg-stone-800 text-stone-300 border border-stone-700'
+                    }`}
+                  >
+                    {machineries.length} Equipos
+                  </span>
+                  {activeLandingSection === 'machinery' && (
+                    <span className="text-[10px] font-black text-amber-100 uppercase tracking-widest mt-1 flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-yellow-300 animate-pulse"></span>
+                      ACTIVO AHORA
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <p
+                className={`text-xs sm:text-xs leading-relaxed mt-1 font-medium ${
+                  activeLandingSection === 'machinery' ? 'text-amber-100/90' : 'text-stone-400'
+                }`}
+              >
+                Retroexcavadoras 4x4, Minicargadores Bobcat, Camiones Volquetes de 15 m³, Mezcladoras y Planchas. Reserva con u opcional operador.
+              </p>
+            </button>
+          </div>
+        </div>
+
+        {/* SECTION 1: MACHINERY RENTAL MODULE */}
+        {activeLandingSection === 'machinery' ? (
+          <MachineryRentModule onBackToMaterials={() => handleSwitchSection('materials')} />
+        ) : (
+          /* SECTION 2: MATERIALS STORE */
+          <>
+            {/* Search & Filter Toolbar Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-4 sm:p-5 mb-8 space-y-4">
+              {/* Top row: Search input & Sort dropdown */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar por material, SKU, resistencia o características (ej: Cemento Tipo I, 1/2, King Kong)..."
+                    className="w-full text-sm pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-stone-50/50"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 hover:text-stone-600 font-medium"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {/* Brand Filter */}
+                  <select
+                    value={selectedBrand}
+                    onChange={(e) => setSelectedBrand(e.target.value)}
+                    className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  >
+                    <option value="all">Todas las Marcas</option>
+                    {brands.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="text-xs font-semibold px-3 py-2.5 rounded-xl border border-stone-200 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  >
+                    <option value="featured">Destacados para obra</option>
+                    <option value="name">Alfabético (A-Z)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Interactive Category Tabs (No subcategories shown) */}
+              <div className="pt-2 border-t border-stone-100">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  <button
+                    onClick={() => setSelectedParentCategory('all')}
+                    className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap ${
+                      selectedParentCategory === 'all'
+                        ? 'bg-stone-900 text-white shadow-xs'
+                        : 'text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200/70'
+                    }`}
+                  >
+                    Todos los Materiales ({products.length})
+                  </button>
+
+                  {parentCategories.map((cat) => {
+                    const count = products.filter((p) => p.categoryId === cat.id).length;
+                    const isActive = selectedParentCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedParentCategory(cat.id)}
+                        className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                          isActive
+                            ? 'bg-yellow-400 text-stone-950 shadow-xs'
+                            : 'text-stone-700 hover:text-stone-950 bg-stone-100 hover:bg-stone-200/70'
+                        }`}
+                      >
+                        <span>{cat.name}</span>
+                        <span className="text-[10px] opacity-75 font-normal">({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
           {/* Tag Filter Chips */}
           <div className="pt-2 border-t border-stone-100 flex items-center gap-2 overflow-x-auto text-xs">
@@ -344,14 +423,12 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           </div>
 
           {(selectedParentCategory !== 'all' ||
-            selectedSubcategory !== 'all' ||
             selectedBrand !== 'all' ||
             selectedTag !== 'all' ||
             searchQuery) && (
             <button
               onClick={() => {
                 setSelectedParentCategory('all');
-                setSelectedSubcategory('all');
                 setSelectedBrand('all');
                 setSelectedTag('all');
                 setSearchQuery('');
@@ -392,7 +469,6 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             <button
               onClick={() => {
                 setSelectedParentCategory('all');
-                setSelectedSubcategory('all');
                 setSelectedTag('all');
                 setSearchQuery('');
               }}
@@ -425,7 +501,52 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             Ir a Mi Perfil & Etiquetas →
           </button>
         </div>
-      </main>
-    </div>
-  );
+
+        {/* Machinery Spotlight Banner inside Materials View */}
+        <div className="mt-12 bg-gradient-to-r from-stone-900 via-stone-800 to-amber-950 text-white rounded-3xl p-6 sm:p-10 border border-stone-700 shadow-md relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-8">
+          <div className="space-y-3 max-w-2xl relative z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-yellow-400/20 text-yellow-400 text-xs font-bold uppercase tracking-wider border border-yellow-400/30">
+              <Truck className="w-3.5 h-3.5" />
+              <span>Servicio de Alquiler de Maquinaria Pesada</span>
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              ¿Tu obra requiere movimiento de tierras o equipos pesados?
+            </h3>
+            <p className="text-stone-300 text-xs sm:text-sm leading-relaxed">
+              En Almacenes Nor Oriente suministramos materiales y también disponemos de una flota moderna de retroexcavadoras Caterpillar, minicargadores Bobcat, camiones volquetes y trompos mezcladores con operadores certificados y seguro SCTR.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-2 text-xs text-yellow-300 font-mono">
+              <span className="bg-black/40 px-2.5 py-1 rounded-lg">🚜 Retroexcavadoras 4x4</span>
+              <span className="bg-black/40 px-2.5 py-1 rounded-lg">🚜 Minicargadores Bobcat</span>
+              <span className="bg-black/40 px-2.5 py-1 rounded-lg">🚚 Camiones Volquete 15m³</span>
+              <span className="bg-black/40 px-2.5 py-1 rounded-lg">⚙️ Mezcladoras 11 p³</span>
+            </div>
+          </div>
+
+          <div className="shrink-0 flex flex-col sm:flex-row lg:flex-col gap-3 w-full sm:w-auto relative z-10">
+            <button
+              onClick={() => handleSwitchSection('machinery')}
+              className="px-6 py-3.5 bg-yellow-400 hover:bg-yellow-500 text-stone-950 font-black text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Truck className="w-4 h-4 text-stone-950" />
+              <span>Ver Flota de Maquinaria →</span>
+            </button>
+            <a
+              href={`https://wa.me/${storeSettings.whatsappNumber}?text=${encodeURIComponent(
+                `Hola ${storeSettings.name}, deseo consultar tarifas y disponibilidad para alquilar maquinaria pesada en obra.`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 text-center"
+            >
+              <PhoneCall className="w-4 h-4" />
+              <span>Cotizar por WhatsApp</span>
+            </a>
+          </div>
+        </div>
+      </>
+    )}
+  </main>
+</div>
+);
 };

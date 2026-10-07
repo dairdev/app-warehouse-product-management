@@ -42,16 +42,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     return parentCategories.length > 0 ? parentCategories[0].id : '';
   });
 
-  const [subcategoryId, setSubcategoryId] = useState<string>(product?.subcategoryId || '');
   const [brandId, setBrandId] = useState<string>(product?.brandId || '');
   const [presentation, setPresentation] = useState<string>(product?.presentation || '');
   const [name, setName] = useState<string>(product?.name || '');
-  const [isNameManuallyEdited, setIsNameManuallyEdited] = useState<boolean>(isEditing);
 
-  // Optional price and sku
-  const [price, setPrice] = useState<string>(
-    product && product.price !== undefined && product.price !== null ? product.price.toString() : ''
-  );
   const [currency, setCurrency] = useState<'PEN' | 'USD'>(product?.currency || 'PEN');
   const [unit, setUnit] = useState<string>(product?.unit || 'unidad');
   const [sku, setSku] = useState<string>(product?.sku || '');
@@ -85,17 +79,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     );
   });
 
-  // Available subcategories for selected category
-  const subcategories = categories.filter((c) => c.parentId === categoryId);
-
   // Available presentations for selected category
   const selectedCategoryObj = categories.find((c) => c.id === categoryId);
   const categoryPresentations = selectedCategoryObj?.defaultPresentations || [];
 
-  // When category changes, reset subcategory and suggest presentation if not editing
+  // When category changes, suggest presentation if available
   const handleCategoryChange = (newCatId: string) => {
     setCategoryId(newCatId);
-    setSubcategoryId('');
     const newCatObj = categories.find((c) => c.id === newCatId);
     if (newCatObj?.defaultPresentations && newCatObj.defaultPresentations.length > 0) {
       setPresentation(newCatObj.defaultPresentations[0]);
@@ -103,35 +93,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setPresentation('');
     }
   };
-
-  // Auto-concatenation effect:
-  // "Material name move it after select category, sub category, brand and presentation;
-  // so the name is the result of concat Sub Category + Brand + Presentation"
-  useEffect(() => {
-    if (!isNameManuallyEdited) {
-      const subcatObj = categories.find((c) => c.id === subcategoryId);
-      const brandObj = brands.find((b) => b.id === brandId);
-
-      const parts: string[] = [];
-      if (subcatObj) {
-        parts.push(subcatObj.name);
-      } else if (selectedCategoryObj) {
-        parts.push(selectedCategoryObj.name);
-      }
-
-      if (brandObj) {
-        parts.push(brandObj.name);
-      }
-
-      if (presentation.trim()) {
-        parts.push(presentation.trim());
-      }
-
-      if (parts.length > 0) {
-        setName(parts.join(' '));
-      }
-    }
-  }, [categoryId, subcategoryId, brandId, presentation, isNameManuallyEdited, categories, brands, selectedCategoryObj]);
 
   const handleAutoSku = () => {
     const cat = categories.find((c) => c.id === categoryId);
@@ -237,9 +198,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       return;
     }
 
-    const priceNum = price.trim() !== '' ? parseFloat(price) : null;
     const cleanAttributes = attributes.filter((a) => a.key.trim() && a.value.trim());
     const selectedBrand = brands.find((b) => b.id === brandId);
+
+    // Auto-assign to generic sub-category of selected category
+    const genSubcat = categories.find((c) => c.parentId === categoryId && c.name.toLowerCase() === 'generic');
+    const assignedSubcatId = genSubcat ? genSubcat.id : `sub-${categoryId}-generic`;
 
     const slug = name
       .toLowerCase()
@@ -251,11 +215,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       slug,
       description: description.trim() || 'Material de construcción para obras civiles y edificación.',
       categoryId,
-      subcategoryId: subcategoryId || null,
+      subcategoryId: assignedSubcatId,
       brandId: brandId || undefined,
       brandName: selectedBrand?.name || undefined,
       presentation: presentation.trim() || undefined,
-      price: priceNum,
+      price: null, // Price hidden from views/forms
       currency,
       unit: unit.trim() || 'unidad',
       sku: sku.trim() || undefined,
@@ -297,18 +261,15 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[82vh] overflow-y-auto">
-          {/* STEP 1: CATEGORY, SUBCATEGORY, BRAND & PRESENTATION */}
+          {/* STEP 1: CLASIFICACIÓN, MARCA Y NOMBRE */}
           <div className="bg-stone-50 p-5 rounded-2xl border border-stone-200 space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-amber-900">
                 1. Clasificación, Marca y Presentación
               </span>
-              <span className="text-[11px] text-stone-400">
-                Genera el nombre automáticamente
-              </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* 1. Categoría */}
               <div>
                 <label className="block text-xs font-semibold text-stone-700 mb-1">
@@ -327,26 +288,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 </select>
               </div>
 
-              {/* 2. Subcategoría */}
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">
-                  Subcategoría
-                </label>
-                <select
-                  value={subcategoryId}
-                  onChange={(e) => setSubcategoryId(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 bg-white font-medium"
-                >
-                  <option value="">-- Sin subcategoría específica --</option>
-                  {subcategories.map((sub) => (
-                    <option key={sub.id} value={sub.id}>
-                      {sub.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 3. Marca (Brand) */}
+              {/* 2. Marca (Brand) */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-semibold text-stone-700">
@@ -399,10 +341,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 )}
               </div>
 
-              {/* 4. Presentación (Related to Category) */}
+              {/* 3. Presentación / Medida */}
               <div>
                 <label className="block text-xs font-semibold text-stone-700 mb-1">
-                  Presentación / Medida (de {selectedCategoryObj?.name})
+                  Presentación / Medida
                 </label>
                 {categoryPresentations.length > 0 ? (
                   <div className="space-y-1.5">
@@ -420,7 +362,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     </select>
                     <input
                       type="text"
-                      placeholder={'O escribir otra medida personalizada (ej: 5/8", 42.5 kg)...'}
+                      placeholder={'O escribir otra medida (ej: 5/8", 42.5 kg)...'}
                       value={presentation}
                       onChange={(e) => setPresentation(e.target.value)}
                       className="w-full text-[11px] px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white"
@@ -438,35 +380,21 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
             </div>
 
-            {/* 5. NOMBRE DEL MATERIAL: PLACED AFTER Category, Subcategory, Brand, Presentation! */}
+            {/* 4. NOMBRE DEL MATERIAL: Free text input */}
             <div className="pt-3 border-t border-stone-200">
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-bold text-stone-900">
-                  Nombre del Material * (Concatenación: Subcategoría + Marca + Presentación)
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setIsNameManuallyEdited(false)}
-                  className="text-[11px] text-amber-800 hover:underline flex items-center gap-1 font-medium"
-                  title="Re-concatenar automáticamente con los valores seleccionados arriba"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>Autogenerar nombre</span>
-                </button>
-              </div>
+              <label className="block text-xs font-bold text-stone-900 mb-1">
+                Nombre del Material * <span className="font-normal text-stone-500">(Texto Libre)</span>
+              </label>
               <input
                 type="text"
                 required
                 value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setIsNameManuallyEdited(true);
-                }}
-                placeholder="Subcategoría + Marca + Presentación"
-                className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-yellow-400 bg-white font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej: Cemento Portland Tipo I Sol 42.5 kg"
+                className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-yellow-400"
               />
               <p className="text-[11px] text-stone-500 mt-1">
-                Puedes ajustar manualmente el nombre si necesitas especificar características adicionales.
+                Ingrese libremente el nombre comercial o técnico del material para el catálogo.
               </p>
             </div>
           </div>
@@ -667,61 +595,32 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </div>
 
           {/* STEP 3: PRICE (OPTIONAL) AND SKU (OPTIONAL) — NO STOCK FIELD! */}
+          {/* STEP 3: UNIDAD Y CÓDIGO (Precios no visibles) */}
           <div className="bg-stone-50 p-5 rounded-2xl border border-stone-200 space-y-4">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-900 block">
-              3. Precio y Código (Ambos Opcionales)
+              3. Unidad de Despacho y Código SKU
             </span>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Optional Price */}
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">
-                  Precio de Venta <span className="font-normal text-stone-400">(Opcional)</span>
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="Dejar vacío para 'A Cotizar'"
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 bg-white font-mono"
-                />
-                <span className="text-[10px] text-stone-400 block mt-1">
-                  Si no se especifica, se muestra como "A Cotizar / Consultar".
-                </span>
-              </div>
-
-              {/* Currency */}
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">
-                  Moneda
-                </label>
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value as 'PEN' | 'USD')}
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 bg-white"
-                >
-                  <option value="PEN">Soles (PEN S/.)</option>
-                  <option value="USD">Dólares (USD $)</option>
-                </select>
-              </div>
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Unidad */}
               <div>
                 <label className="block text-xs font-semibold text-stone-700 mb-1">
-                  Unidad de Medida / Despacho
+                  Unidad de Medida / Despacho *
                 </label>
                 <input
                   type="text"
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
                   placeholder="ej: bolsa, varilla, m³, millar, panel"
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 bg-white"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 bg-white font-medium"
                 />
+                <span className="text-[10px] text-stone-400 block mt-1">
+                  Especifica cómo se comercializa y despacha este material.
+                </span>
               </div>
 
               {/* Optional SKU */}
-              <div className="sm:col-span-3">
+              <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-semibold text-stone-700">
                     Código SKU <span className="font-normal text-stone-400">(Opcional)</span>
@@ -739,7 +638,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   type="text"
                   value={sku}
                   onChange={(e) => setSku(e.target.value)}
-                  placeholder="Ej: ACE-COR-050 (opcional)"
+                  placeholder="CEM-425 (opcional)"
                   className="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 bg-white font-mono"
                 />
               </div>

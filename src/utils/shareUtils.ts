@@ -1,4 +1,4 @@
-import { Product, ClientProfile, StoreSettings } from '../types';
+import { Product, ClientProfile, StoreSettings, Machinery } from '../types';
 
 export const STORE_INFO: StoreSettings = {
   name: 'Almacenes Nor Oriente',
@@ -32,15 +32,14 @@ export const getProductWhatsAppUrl = (product: Product, settings?: StoreSettings
   const store = settings || STORE_INFO;
   const url = `${window.location.origin}/#producto/${product.id}`;
   const lines = [
-    `*¡Hola! Me interesa este material de construcción de ${store.name}:*`,
+    `*¡Hola! Me interesa cotizar este material de construcción de ${store.name}:*`,
     ``,
     `🏗️ *${product.name}*`,
+    product.unit ? `📦 *Unidad de despacho:* ${product.unit}` : '',
     product.brandName ? `🏷️ *Marca:* ${product.brandName}` : '',
     product.presentation ? `📐 *Presentación:* ${product.presentation}` : '',
-    product.price !== undefined && product.price !== null
-      ? `💰 *Precio:* ${formatCurrency(product.price, product.currency)}${product.unit ? ` por ${product.unit}` : ''}`
-      : `💰 *Precio:* A cotizar`,
     product.sku ? `🔖 *Código SKU:* ${product.sku}` : '',
+    `💰 *Condición comercial:* Precio a cotizar por volumen y flete`,
   ].filter(Boolean);
 
   if (product.attributes && product.attributes.length > 0) {
@@ -60,7 +59,7 @@ export const getProductWhatsAppUrl = (product: Product, settings?: StoreSettings
 };
 
 /**
- * Generate WhatsApp quote request for a list of tagged products
+ * Generate WhatsApp quote request for a list of tagged products (prices omitted for client quotes)
  */
 export const getQuoteWhatsAppUrl = (
   products: Product[],
@@ -75,67 +74,96 @@ export const getQuoteWhatsAppUrl = (
     clientProfile.obraProjectName ? `🏗️ *Proyecto / Obra:* ${clientProfile.obraProjectName}` : '',
     clientProfile.notes ? `📝 *Detalles de entrega:* ${clientProfile.notes}` : '',
     ``,
-    `*Materiales seleccionados:*`,
+    `*Materiales para cotizar:*`,
   ].filter(Boolean);
 
-  let totalEstimate = 0;
-  let hasPrices = false;
-
   products.forEach((p, idx) => {
-    if (typeof p.price === 'number') {
-      totalEstimate += p.price;
-      hasPrices = true;
-    }
-    const priceText = p.price !== undefined && p.price !== null ? formatCurrency(p.price, p.currency) : 'A cotizar';
-    const skuText = p.sku ? ` [${p.sku}]` : '';
-    lines.push(`${idx + 1}. *${p.name}*${skuText} — ${priceText}${p.unit ? `/${p.unit}` : ''}`);
+    const skuText = p.sku ? ` [SKU: ${p.sku}]` : '';
+    const unitText = p.unit ? ` (Unidad: ${p.unit})` : '';
+    const presText = p.presentation ? ` · ${p.presentation}` : '';
+    lines.push(`${idx + 1}. *${p.name}*${unitText}${presText}${skuText}`);
   });
 
-  if (hasPrices) {
-    lines.push(``);
-    lines.push(`*Total referencial:* ${formatCurrency(totalEstimate)}`);
-  }
-
   lines.push(``);
-  lines.push(`Por favor confírmeme disponibilidad y costo de flete. ¡Gracias!`);
+  lines.push(`Por favor envíeme la cotización formal con flete a obra y condiciones comerciales.`);
 
   const text = encodeURIComponent(lines.join('\n'));
   return `https://wa.me/${store.whatsappNumber}?text=${text}`;
 };
 
 /**
- * Generate Telegram share URL
+ * Generate WhatsApp rental inquiry for machinery
+ */
+export const getMachineryWhatsAppUrl = (
+  machinery: Machinery,
+  rentalDetails?: {
+    estimatedDays?: number | string;
+    location?: string;
+    needsOperator?: boolean;
+    notes?: string;
+  },
+  settings?: StoreSettings
+): string => {
+  const store = settings || STORE_INFO;
+  const url = `${window.location.origin}/#maquinaria/${machinery.id}`;
+  const lines = [
+    `*¡Hola! Deseo cotizar el ALQUILER de maquinaria de ${store.name}:*`,
+    ``,
+    `🚜 *Equipo:* ${machinery.name}`,
+    `🏷️ *Marca / Modelo:* ${machinery.brand} ${machinery.model}`,
+    machinery.capacity ? `📐 *Capacidad:* ${machinery.capacity}` : '',
+    machinery.powerHp ? `⚡ *Potencia:* ${machinery.powerHp}` : '',
+    ``,
+    `*Detalles del Alquiler:*`,
+    rentalDetails?.estimatedDays ? `⏱️ *Tiempo estimado:* ${rentalDetails.estimatedDays} día(s)` : '⏱️ *Tiempo estimado:* A coordinar',
+    rentalDetails?.location ? `📍 *Lugar de la obra:* ${rentalDetails.location}` : '📍 *Lugar de la obra:* Selva Central / San Martín',
+    rentalDetails?.needsOperator !== undefined
+      ? `👷 *Requiere operador:* ${rentalDetails.needsOperator ? 'Sí (con operador)' : 'No (solo equipo)'}`
+      : `👷 *Operador:* ${machinery.includesOperator ? 'Incluye operador certificado' : 'Solo equipo'}`,
+    rentalDetails?.notes ? `📝 *Observaciones:* ${rentalDetails.notes}` : '',
+    ``,
+    `🔗 *Ficha técnica:* ${url}`,
+    `🏢 *${store.name}* — ${store.address}, ${store.city}. Despacho y movilización directa.`,
+  ].filter(Boolean);
+
+  const text = encodeURIComponent(lines.join('\n'));
+  return `https://wa.me/${store.whatsappNumber}?text=${text}`;
+};
+
+/**
+ * Generate Telegram share URL (prices omitted for public client view)
  */
 export const getTelegramShareUrl = (product: Product, settings?: StoreSettings): string => {
   const store = settings || STORE_INFO;
   const url = `${window.location.origin}/#producto/${product.id}`;
-  const priceInfo = product.price !== undefined && product.price !== null
-    ? ` - ${formatCurrency(product.price, product.currency)}${product.unit ? `/${product.unit}` : ''}`
-    : ' - Consultar precio';
+  const unitSuffix = product.unit && !product.name.toLowerCase().includes(product.unit.toLowerCase())
+    ? ` (${product.unit})`
+    : '';
   const text = encodeURIComponent(
-    `Revisa este material en ${store.name}: ${product.name}${priceInfo}`
+    `Revisa este material en ${store.name}: ${product.name}${unitSuffix} - Consulte cotización y disponibilidad`
   );
   return `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${text}`;
 };
 
 /**
- * Generate Mailto link
+ * Generate Mailto link (prices omitted for public client view)
  */
 export const getEmailShareUrl = (product: Product, settings?: StoreSettings): string => {
   const store = settings || STORE_INFO;
   const url = `${window.location.origin}/#producto/${product.id}`;
-  const subject = encodeURIComponent(`Ficha Técnica: ${product.name} - ${store.name}`);
-  const priceInfo = product.price !== undefined && product.price !== null
-    ? `${formatCurrency(product.price, product.currency)} por ${product.unit || 'unidad'}`
-    : 'A cotizar';
+  const unitSuffix = product.unit && !product.name.toLowerCase().includes(product.unit.toLowerCase())
+    ? ` (${product.unit})`
+    : '';
+  const subject = encodeURIComponent(`Ficha Técnica: ${product.name}${unitSuffix} - ${store.name}`);
   const skuInfo = product.sku ? `SKU: ${product.sku}\n` : '';
 
   const body = encodeURIComponent(
     `Hola,\n\nTe comparto la ficha técnica del siguiente material de construcción de ${store.name}:\n\n` +
-      `Producto: ${product.name}\n` +
+      `Producto: ${product.name}${unitSuffix}\n` +
+      (product.unit ? `Unidad de despacho: ${product.unit}\n` : '') +
       `Marca: ${product.brandName || 'N/A'}\n` +
       `Presentación: ${product.presentation || 'N/A'}\n` +
-      `Precio: ${priceInfo}\n` +
+      `Condición: Precio a cotizar por volumen y flete a pie de obra\n` +
       skuInfo +
       `Descripción: ${product.description}\n\n` +
       `Puedes ver todos los detalles y fotografías aquí:\n${url}\n\n` +

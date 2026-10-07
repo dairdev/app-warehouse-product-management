@@ -13,6 +13,7 @@ import {
   PhoneCall,
   Menu,
   X,
+  Truck,
 } from 'lucide-react';
 import { STORE_INFO } from '../utils/shareUtils';
 
@@ -65,6 +66,21 @@ export const Header: React.FC<HeaderProps> = ({
             >
               Catálogo de Materiales
               {(currentView === 'catalog' || currentView.startsWith('product-')) && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-400" />
+              )}
+            </button>
+
+            <button
+              onClick={() => onNavigate('machinery')}
+              className={`transition-colors py-1 flex items-center gap-1.5 relative ${
+                currentView === 'machinery'
+                  ? 'text-stone-900 font-semibold'
+                  : 'hover:text-stone-900'
+              }`}
+            >
+              <Truck className="w-4 h-4 text-amber-600" />
+              <span>Alquiler de Maquinaria</span>
+              {currentView === 'machinery' && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-400" />
               )}
             </button>
@@ -224,7 +240,7 @@ export const Header: React.FC<HeaderProps> = ({
                   className="px-4 py-2 text-xs font-semibold text-stone-900 bg-yellow-400 hover:bg-yellow-500 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
                 >
                   <LogIn className="w-3.5 h-3.5" />
-                  <span>Acceso Personal</span>
+                  <span>Ingresar / Registrarse</span>
                 </button>
               </div>
             )}
@@ -263,6 +279,16 @@ export const Header: React.FC<HeaderProps> = ({
             className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium hover:bg-stone-100"
           >
             Catálogo de Materiales
+          </button>
+          <button
+            onClick={() => {
+              onNavigate('machinery');
+              setMobileMenuOpen(false);
+            }}
+            className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium hover:bg-stone-100 flex items-center gap-2 text-stone-900"
+          >
+            <Truck className="w-4 h-4 text-amber-600" />
+            <span>Alquiler de Maquinaria</span>
           </button>
           <button
             onClick={() => {
@@ -324,7 +350,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }}
                 className="w-full text-center px-4 py-2 text-xs font-semibold text-stone-900 bg-yellow-400 hover:bg-yellow-500 rounded-lg"
               >
-                Acceso Personal / Administrador
+                Ingresar / Registrarse (Clientes & Admin)
               </button>
             )}
           </div>

@@ -9,20 +9,32 @@ import {
   INITIAL_PRODUCTS,
   INITIAL_USERS,
   INITIAL_TAGS,
+  INITIAL_MACHINERY,
 } from './src/data/initialData';
 import { STORE_INFO } from './src/utils/shareUtils';
-import { Product, Category, Brand, User, StoreSettings, Tag } from './src/types';
+import { Product, Category, Brand, User, StoreSettings, Tag, Machinery } from './src/types';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Parse command line arguments for port (e.g. npm run dev --port 3000)
+// Parse port: dev server in AI Studio must ALWAYS bind to port 3000 (DEFAULT_APP_PORT),
+// never port 8080 which is reserved for the NGINX reverse proxy.
 const args = process.argv.slice(2);
-let PORT = Number(process.env.PORT) || 3000;
-const portArgIdx = args.indexOf('--port');
-if (portArgIdx !== -1 && args[portArgIdx + 1]) {
-  const parsedPort = Number(args[portArgIdx + 1]);
-  if (!isNaN(parsedPort) && parsedPort > 0) {
-    PORT = parsedPort;
+let PORT = 3000;
+if (process.env.DEFAULT_APP_PORT) {
+  const p = Number(process.env.DEFAULT_APP_PORT);
+  if (!isNaN(p) && p > 0) PORT = p;
+} else if (process.env.PORT && process.env.PORT !== '8080') {
+  const p = Number(process.env.PORT);
+  if (!isNaN(p) && p > 0) PORT = p;
+}
+
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--port' || args[i] === '-p') {
+    const val = Number(args[i + 1]);
+    if (!isNaN(val) && val > 0 && val !== 8080) PORT = val;
+  } else if (args[i].startsWith('--port=')) {
+    const val = Number(args[i].split('=')[1]);
+    if (!isNaN(val) && val > 0 && val !== 8080) PORT = val;
   }
 }
 
@@ -33,6 +45,7 @@ let currentBrands: Brand[] = [...INITIAL_BRANDS];
 let currentProducts: Product[] = [...INITIAL_PRODUCTS];
 let currentUsers: User[] = [...INITIAL_USERS];
 let currentTags: Tag[] = [...INITIAL_TAGS];
+let currentMachinery: Machinery[] = [...INITIAL_MACHINERY];
 
 async function startServer() {
   const app = express();
@@ -235,6 +248,50 @@ async function startServer() {
     res.status(201).json(newTag);
   });
 
+  // Machinery CRUD
+  apiRouter.get('/machinery', (_req, res) => {
+    res.json(currentMachinery);
+  });
+
+  apiRouter.get('/machinery/:id', (req, res) => {
+    const item = currentMachinery.find((m) => m.id === req.params.id || m.slug === req.params.id);
+    if (item) {
+      res.json(item);
+    } else {
+      res.status(404).json({ error: 'Maquinaria no encontrada' });
+    }
+  });
+
+  apiRouter.post('/machinery', (req, res) => {
+    const newMach: Machinery = {
+      id: `mach-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...req.body,
+    };
+    currentMachinery.unshift(newMach);
+    res.status(201).json(newMach);
+  });
+
+  apiRouter.put('/machinery/:id', (req, res) => {
+    const idx = currentMachinery.findIndex((m) => m.id === req.params.id);
+    if (idx !== -1) {
+      currentMachinery[idx] = {
+        ...currentMachinery[idx],
+        ...req.body,
+        updatedAt: new Date().toISOString(),
+      };
+      res.json(currentMachinery[idx]);
+    } else {
+      res.status(404).json({ error: 'Maquinaria no encontrada' });
+    }
+  });
+
+  apiRouter.delete('/machinery/:id', (req, res) => {
+    currentMachinery = currentMachinery.filter((m) => m.id !== req.params.id);
+    res.json({ success: true, message: 'Maquinaria eliminada' });
+  });
+
   // -------------------------------------------------------------------------
   // File Uploads (Parity with Slim PHP UploadController)
   // -------------------------------------------------------------------------
@@ -320,6 +377,7 @@ async function startServer() {
   // -------------------------------------------------------------------------
   if (!isProduction) {
     const vite = await createViteServer({
+      root: process.cwd(),
       server: {
         middlewareMode: true,
         hmr: process.env.DISABLE_HMR !== 'true',
@@ -343,9 +401,19 @@ async function startServer() {
   }
 
   // Bind server to port 3000
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Server] Ferretería Almacenes Nor Oriente corriendo en http://0.0.0.0:${PORT}`);
     console.log(`[Server] API RESTful lista en http://0.0.0.0:${PORT}/api/health`);
+  });
+
+  server.on('error', (err: any) => {
+    console.error(`[Server Listen Error]`, err);
+    if (err.code === 'EADDRINUSE' && PORT !== 3000) {
+      console.log(`Port ${PORT} in use, retrying on port 3000...`);
+      app.listen(3000, '0.0.0.0', () => {
+        console.log(`[Server] Running on fallback port http://0.0.0.0:3000`);
+      });
+    }
   });
 }
 

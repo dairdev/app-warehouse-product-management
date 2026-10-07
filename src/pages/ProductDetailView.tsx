@@ -33,8 +33,10 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   onOpenTagModal,
   onSelectRelated,
 }) => {
-  const { products, categories, storeSettings, isProductTaggedByClient, showToast } = useStore();
+  const { products, categories, storeSettings, isProductTaggedByClient, showToast, currentUser, isAdmin } = useStore();
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+
+  const isManager = isAdmin() || currentUser?.role === 'staff';
 
   const product = products.find((p) => p.id === productId);
 
@@ -54,14 +56,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
   }
 
   const category = categories.find((c) => c.id === product.categoryId);
-  const subcategory = categories.find((c) => c.id === product.subcategoryId);
   const isTagged = isProductTaggedByClient(product.id);
   const whatsappUrl = getProductWhatsAppUrl(product, storeSettings);
 
   const mediaList = product.media && product.media.length > 0 ? product.media : [];
   const currentMedia = mediaList[selectedMediaIndex] || mediaList[0];
-
-  const hasPrice = product.price !== undefined && product.price !== null && product.price > 0;
 
   // Related products from same category
   const relatedProducts = products
@@ -69,7 +68,7 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
     .slice(0, 3);
 
   const handleDownloadPdf = () => {
-    downloadProductPdf(product, category?.name || 'Materiales de Construcción');
+    downloadProductPdf(product, category?.name || 'Materiales de Construcción', isManager);
     showToast('Ficha técnica generada en formato PDF');
   };
 
@@ -86,17 +85,11 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
             <span>Volver al Catálogo de Materiales</span>
           </button>
 
-          {/* Breadcrumb unboxed */}
+          {/* Breadcrumb unboxed (No sub-categories shown) */}
           <div className="hidden sm:flex items-center gap-1.5 text-xs text-stone-400">
             <span>Catálogo</span>
             <span aria-hidden="true">/</span>
             <span>{category?.name || 'Materiales'}</span>
-            {subcategory && (
-              <>
-                <span aria-hidden="true">/</span>
-                <span>{subcategory.name}</span>
-              </>
-            )}
             {product.sku && (
               <>
                 <span aria-hidden="true">/</span>
@@ -239,6 +232,12 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                     <span className="font-bold text-amber-900 font-mono text-right">{product.presentation}</span>
                   </div>
                 )}
+                {product.unit && (
+                  <div className="py-2.5 flex items-center justify-between hover:bg-stone-50/60 px-2 rounded-lg">
+                    <span className="font-semibold text-stone-600">Unidad de Despacho:</span>
+                    <span className="font-bold text-amber-950 uppercase font-mono text-right">{product.unit}</span>
+                  </div>
+                )}
                 {product.attributes && product.attributes.length > 0 ? (
                   product.attributes.map((attr, idx) => (
                     <div
@@ -283,32 +282,37 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                   )}
                 </div>
 
-                <h1 className="text-2xl font-extrabold text-stone-900 tracking-tight leading-snug">
-                  {product.name}
+                {/* Material Name with Units */}
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-900 tracking-tight leading-snug flex flex-wrap items-baseline gap-2">
+                  <span>
+                    {product.name}
+                    {product.unit && !product.name.toLowerCase().includes(product.unit.toLowerCase()) ? ` (${product.unit})` : ''}
+                  </span>
+                  {product.unit && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs sm:text-sm font-bold bg-amber-100 text-amber-950 border border-amber-300 font-mono tracking-wide">
+                      Unidad: {product.unit}
+                    </span>
+                  )}
                 </h1>
               </div>
 
-              {/* Price Box — Optional Price handling, NO STOCK SHOWN */}
-              <div className="bg-yellow-50/70 border border-yellow-200/80 rounded-xl p-4">
-                <div className="text-xs text-stone-600 font-medium">Condición Comercial:</div>
-                <div className="flex items-baseline gap-2 mt-1">
-                  {hasPrice ? (
-                    <>
-                      <span className="text-3xl font-black text-stone-950 tabular-nums tracking-tight">
-                        {formatCurrency(product.price!, product.currency)}
-                      </span>
-                      <span className="text-xs font-medium text-stone-700">
-                        por {product.unit || 'unidad'} (inc. IGV)
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xl font-extrabold text-amber-900">
-                      Precio a Cotizar / Consultar
+              {/* Commercial & Dispatch Status (Prices hidden completely in all views) */}
+              <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 space-y-2">
+                <div className="text-xs text-stone-500 font-semibold uppercase tracking-wider">
+                  Condición de Suministro:
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
+                    Cotización Directa para Obra
+                  </span>
+                  {product.unit && (
+                    <span className="text-xs font-bold text-amber-900 font-mono">
+                      (por {product.unit})
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-stone-500 mt-2">
-                  Atención por camión completo, volumen o pedido fraccionado a pie de obra.
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  Tarifas corporativas y mayoristas según cubicación, camión completo o entrega a pie de obra. Solicite atención directa por WhatsApp con nuestros asesores de despacho.
                 </p>
               </div>
 
@@ -387,8 +391,8 @@ export const ProductDetailView: React.FC<ProductDetailViewProps> = ({
                           {rel.brandName ? `${rel.brandName} · ` : ''}{rel.presentation || ''}
                         </div>
                       </div>
-                      <div className="text-xs font-bold text-stone-900 whitespace-nowrap tabular-nums">
-                        {rel.price ? formatCurrency(rel.price, rel.currency) : 'A Cotizar'}
+                      <div className="text-xs font-bold text-amber-900 group-hover:underline whitespace-nowrap">
+                        Ver Ficha →
                       </div>
                     </div>
                   ))}

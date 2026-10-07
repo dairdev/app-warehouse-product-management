@@ -35,6 +35,11 @@ function AppContent() {
     return 'catalog';
   });
 
+  const [landingSection, setLandingSection] = useState<'materials' | 'machinery'>(() => {
+    const hash = window.location.hash.replace('#', '');
+    return hash === 'maquinaria' ? 'machinery' : 'materials';
+  });
+
   const [activeProductId, setActiveProductId] = useState<string | null>(() => {
     const hash = window.location.hash.replace('#', '');
     if (hash.startsWith('producto/')) {
@@ -56,6 +61,14 @@ function AppContent() {
         const id = hash.split('/')[1];
         setActiveProductId(id);
         setCurrentView(`product-${id}`);
+      } else if (hash === 'maquinaria') {
+        setCurrentView('catalog');
+        setLandingSection('machinery');
+        setActiveProductId(null);
+      } else if (hash === 'materiales') {
+        setCurrentView('catalog');
+        setLandingSection('materials');
+        setActiveProductId(null);
       } else if (hash === 'cliente') {
         setCurrentView('client-profile');
       } else if (hash === 'admin') {
@@ -66,6 +79,7 @@ function AppContent() {
         setCurrentView('print-catalog');
       } else {
         setCurrentView('catalog');
+        setLandingSection('materials');
       }
     };
 
@@ -78,6 +92,7 @@ function AppContent() {
     if (!currentUser && currentView === 'admin-dashboard') {
       window.location.hash = '';
       setCurrentView('catalog');
+      setLandingSection('materials');
       setActiveProductId(null);
     }
   }, [currentUser, currentView]);
@@ -86,6 +101,12 @@ function AppContent() {
     if (view === 'catalog') {
       window.location.hash = '';
       setCurrentView('catalog');
+      setLandingSection('materials');
+      setActiveProductId(null);
+    } else if (view === 'machinery') {
+      window.location.hash = 'maquinaria';
+      setCurrentView('catalog');
+      setLandingSection('machinery');
       setActiveProductId(null);
     } else if (view === 'product' && id) {
       window.location.hash = `producto/${id}`;
@@ -120,7 +141,7 @@ function AppContent() {
     <div className="min-h-screen flex flex-col bg-stone-50 font-sans selection:bg-yellow-400 selection:text-black">
       {/* Universal 3-Zone Header */}
       <Header
-        currentView={currentView}
+        currentView={currentView === 'catalog' && landingSection === 'machinery' ? 'machinery' : currentView}
         onNavigate={navigateTo}
         onOpenSqlViewer={() => setIsSqlModalOpen(true)}
       />
@@ -134,6 +155,11 @@ function AppContent() {
             onOpenTagModal={(p) => setTaggingProduct(p)}
             onNavigateToClientProfile={() => navigateTo('client-profile')}
             onPrintCatalog={() => navigateTo('print-catalog')}
+            initialLandingSection={landingSection}
+            onSectionChange={(section) => {
+              setLandingSection(section);
+              window.location.hash = section === 'machinery' ? 'maquinaria' : '';
+            }}
           />
         )}
 

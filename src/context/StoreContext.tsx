@@ -9,6 +9,10 @@ import {
   ProductMedia,
   Brand,
   StoreSettings,
+  Machinery,
+  MachineryBrand,
+  MachineryRentalRequest,
+  RentalRequestStatus,
 } from '../types';
 import {
   INITIAL_PRODUCTS,
@@ -16,6 +20,9 @@ import {
   INITIAL_TAGS,
   INITIAL_USERS,
   INITIAL_BRANDS,
+  INITIAL_MACHINERY,
+  INITIAL_MACHINERY_BRANDS,
+  INITIAL_RENTAL_REQUESTS,
 } from '../data/initialData';
 import { STORE_INFO } from '../utils/shareUtils';
 import { apiService, SlimHealthResponse } from '../services/apiService';
@@ -48,6 +55,19 @@ interface StoreContextType {
   logout: () => void;
   switchRole: (role: 'guest' | 'admin' | 'staff' | 'client') => void;
   isAdmin: () => boolean;
+  registerClient: (data: {
+    name: string;
+    email: string;
+    password?: string;
+    phone?: string;
+    company?: string;
+    authProvider?: 'email' | 'google';
+  }) => Promise<boolean>;
+  loginWithGoogle: (googleUser?: {
+    name: string;
+    email: string;
+    avatarUrl?: string;
+  }) => Promise<boolean>;
 
   // Store Settings (Admin only)
   updateStoreSettings: (settings: Partial<StoreSettings>) => boolean;
@@ -58,6 +78,32 @@ interface StoreContextType {
   deleteProduct: (id: string) => boolean;
   getProductById: (id: string) => Product | undefined;
   getProductBySlug: (slug: string) => Product | undefined;
+
+  // Machinery Renting Module
+  machineries: Machinery[];
+  addMachinery: (machinery: Omit<Machinery, 'id' | 'createdAt' | 'updatedAt'>) => Machinery;
+  updateMachinery: (id: string, data: Partial<Machinery>) => boolean;
+  deleteMachinery: (id: string) => boolean;
+  getMachineryById: (id: string) => Machinery | undefined;
+
+  // Machinery Brands CRUD
+  machineryBrands: MachineryBrand[];
+  addMachineryBrand: (brand: Omit<MachineryBrand, 'id'>) => MachineryBrand;
+  updateMachineryBrand: (id: string, data: Partial<MachineryBrand>) => boolean;
+  deleteMachineryBrand: (id: string) => boolean;
+
+  // Machinery Rental Requests (Application Management)
+  rentalRequests: MachineryRentalRequest[];
+  addRentalRequest: (
+    req: Omit<MachineryRentalRequest, 'id' | 'createdAt' | 'status'> & { status?: RentalRequestStatus }
+  ) => MachineryRentalRequest;
+  updateRentalRequestStatus: (
+    id: string,
+    status: RentalRequestStatus,
+    approvedBy?: string
+  ) => boolean;
+  updateRentalRequest: (id: string, data: Partial<MachineryRentalRequest>) => boolean;
+  deleteRentalRequest: (id: string) => boolean;
 
   // Brands CRUD
   addBrand: (brand: Omit<Brand, 'id'>) => Brand;
@@ -102,6 +148,9 @@ const STORAGE_KEYS = {
   AUTH: 'almacenes_auth_user_v2',
   CLIENT_PROFILE: 'almacenes_client_profile_v2',
   SETTINGS: 'almacenes_store_settings_v2',
+  MACHINERY: 'almacenes_machinery_v2',
+  MACHINERY_BRANDS: 'almacenes_machinery_brands_v2',
+  RENTAL_REQUESTS: 'almacenes_rental_requests_v2',
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -112,6 +161,36 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return saved ? JSON.parse(saved) : STORE_INFO;
     } catch {
       return STORE_INFO;
+    }
+  });
+
+  // Machinery State
+  const [machineries, setMachineries] = useState<Machinery[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.MACHINERY);
+      return saved ? JSON.parse(saved) : INITIAL_MACHINERY;
+    } catch {
+      return INITIAL_MACHINERY;
+    }
+  });
+
+  // Machinery Brands State
+  const [machineryBrands, setMachineryBrands] = useState<MachineryBrand[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.MACHINERY_BRANDS);
+      return saved ? JSON.parse(saved) : INITIAL_MACHINERY_BRANDS;
+    } catch {
+      return INITIAL_MACHINERY_BRANDS;
+    }
+  });
+
+  // Machinery Rental Requests State
+  const [rentalRequests, setRentalRequests] = useState<MachineryRentalRequest[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.RENTAL_REQUESTS);
+      return saved ? JSON.parse(saved) : INITIAL_RENTAL_REQUESTS;
+    } catch {
+      return INITIAL_RENTAL_REQUESTS;
     }
   });
 
@@ -237,6 +316,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.CLIENT_PROFILE, JSON.stringify(clientProfile));
   }, [clientProfile]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.MACHINERY, JSON.stringify(machineries));
+  }, [machineries]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.MACHINERY_BRANDS, JSON.stringify(machineryBrands));
+  }, [machineryBrands]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.RENTAL_REQUESTS, JSON.stringify(rentalRequests));
+  }, [rentalRequests]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(storeSettings));
@@ -380,8 +471,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Products CRUD
   const addProduct = (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Product => {
     const id = 'prod-' + Date.now().toString(36);
+    // Automatically guarantee subcategoryId is set to Generic if missing
+    const genSubcat = categories.find((c) => c.parentId === productData.categoryId && c.name.toLowerCase() === 'generic');
+    const assignedSubcatId = productData.subcategoryId || (genSubcat ? genSubcat.id : `sub-${productData.categoryId}-generic`);
+
     const newProduct: Product = {
       ...productData,
+      subcategoryId: assignedSubcatId,
       id,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -397,15 +493,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const updateProduct = (id: string, productData: Partial<Product>): boolean => {
     setProducts((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              ...productData,
-              updatedAt: new Date().toISOString(),
-            }
-          : item
-      )
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const targetCatId = productData.categoryId || item.categoryId;
+        const genSubcat = categories.find((c) => c.parentId === targetCatId && c.name.toLowerCase() === 'generic');
+        const assignedSubcatId = productData.subcategoryId !== undefined
+          ? productData.subcategoryId
+          : (genSubcat ? genSubcat.id : item.subcategoryId);
+
+        return {
+          ...item,
+          ...productData,
+          subcategoryId: assignedSubcatId,
+          updatedAt: new Date().toISOString(),
+        };
+      })
     );
     // Persist to Slim PHP
     apiService.updateProduct(id, productData).catch((err) => {
@@ -431,6 +533,193 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const getProductBySlug = (slug: string) => {
     return products.find((p) => p.slug === slug);
+  };
+
+  // Machinery CRUD
+  const addMachinery = (machineryData: Omit<Machinery, 'id' | 'createdAt' | 'updatedAt'>): Machinery => {
+    const id = 'mach-' + Date.now().toString(36);
+    const newMach: Machinery = {
+      ...machineryData,
+      id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setMachineries((prev) => [newMach, ...prev]);
+    showToast(`Maquinaria "${newMach.name}" agregada al catálogo de alquiler`);
+    return newMach;
+  };
+
+  const updateMachinery = (id: string, data: Partial<Machinery>): boolean => {
+    setMachineries((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...data, updatedAt: new Date().toISOString() } : m))
+    );
+    showToast('Ficha de maquinaria actualizada correctamente');
+    return true;
+  };
+
+  const deleteMachinery = (id: string): boolean => {
+    setMachineries((prev) => prev.filter((m) => m.id !== id));
+    showToast('Maquinaria retirada del módulo de alquiler', 'info');
+    return true;
+  };
+
+  const getMachineryById = (id: string) => {
+    return machineries.find((m) => m.id === id);
+  };
+
+  // Machinery Brands CRUD
+  const addMachineryBrand = (brandData: Omit<MachineryBrand, 'id'>): MachineryBrand => {
+    const id = 'mbrand-' + Date.now().toString(36);
+    const newBrand: MachineryBrand = {
+      ...brandData,
+      id,
+    };
+    setMachineryBrands((prev) => [...prev, newBrand]);
+    showToast(`Marca de maquinaria "${newBrand.name}" registrada con éxito`);
+    return newBrand;
+  };
+
+  const updateMachineryBrand = (id: string, data: Partial<MachineryBrand>): boolean => {
+    setMachineryBrands((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, ...data } : b))
+    );
+    showToast('Marca de maquinaria actualizada');
+    return true;
+  };
+
+  const deleteMachineryBrand = (id: string): boolean => {
+    const target = machineryBrands.find((b) => b.id === id);
+    const inUse = machineries.some(
+      (m) => m.brand.toLowerCase() === (target?.name || '').toLowerCase()
+    );
+    if (inUse) {
+      showToast('No se puede eliminar la marca porque hay maquinaria asignada a ella', 'error');
+      return false;
+    }
+    setMachineryBrands((prev) => prev.filter((b) => b.id !== id));
+    showToast('Marca de maquinaria eliminada', 'info');
+    return true;
+  };
+
+  // Machinery Rental Requests (Application Management)
+  const addRentalRequest = (
+    reqData: Omit<MachineryRentalRequest, 'id' | 'createdAt' | 'status'> & { status?: RentalRequestStatus }
+  ): MachineryRentalRequest => {
+    const id = 'rent-req-' + Date.now().toString(36);
+    const newReq: MachineryRentalRequest = {
+      ...reqData,
+      id,
+      status: reqData.status || 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    setRentalRequests((prev) => [newReq, ...prev]);
+    showToast(`Solicitud de alquiler registrada para ${newReq.machineryName}`, 'success');
+    return newReq;
+  };
+
+  const updateRentalRequestStatus = (
+    id: string,
+    status: RentalRequestStatus,
+    approvedBy?: string
+  ): boolean => {
+    setRentalRequests((prev) =>
+      prev.map((req) => {
+        if (req.id !== id) return req;
+        const isApproved = status === 'approved';
+        return {
+          ...req,
+          status,
+          approvedBy: isApproved ? (approvedBy || currentUser?.name || 'Administrador') : req.approvedBy,
+          approvedAt: isApproved ? new Date().toISOString() : req.approvedAt,
+        };
+      })
+    );
+    const msg =
+      status === 'approved'
+        ? 'Solicitud aprobada con éxito'
+        : status === 'rejected'
+        ? 'Solicitud rechazada'
+        : status === 'completed'
+        ? 'Solicitud marcada como completada'
+        : 'Estado de solicitud actualizado';
+    showToast(msg, status === 'rejected' ? 'info' : 'success');
+    return true;
+  };
+
+  const updateRentalRequest = (id: string, data: Partial<MachineryRentalRequest>): boolean => {
+    setRentalRequests((prev) =>
+      prev.map((req) => (req.id === id ? { ...req, ...data } : req))
+    );
+    showToast('Solicitud de alquiler actualizada');
+    return true;
+  };
+
+  const deleteRentalRequest = (id: string): boolean => {
+    setRentalRequests((prev) => prev.filter((req) => req.id !== id));
+    showToast('Solicitud de alquiler eliminada', 'info');
+    return true;
+  };
+
+  // Client Registration & Google Auth
+  const registerClient = async (data: {
+    name: string;
+    email: string;
+    password?: string;
+    phone?: string;
+    company?: string;
+    authProvider?: 'email' | 'google';
+  }): Promise<boolean> => {
+    const existing = users.find((u) => u.email.toLowerCase() === data.email.toLowerCase());
+    if (existing) {
+      showToast('Ya existe una cuenta con este correo. Inicia sesión directamente.', 'error');
+      return false;
+    }
+    const id = 'user-client-' + Date.now().toString(36);
+    const newUser: User = {
+      id,
+      name: data.name.trim(),
+      email: data.email.trim().toLowerCase(),
+      password: data.password || 'Cliente123!',
+      phone: data.phone?.trim() || '',
+      company: data.company?.trim() || '',
+      role: 'client',
+      authProvider: data.authProvider || 'email',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setUsers((prev) => [...prev, newUser]);
+    setCurrentUser(newUser);
+    showToast(`¡Bienvenido(a), ${newUser.name}! Tu cuenta de cliente ha sido creada.`, 'success');
+    return true;
+  };
+
+  const loginWithGoogle = async (googleUser?: {
+    name: string;
+    email: string;
+    avatarUrl?: string;
+  }): Promise<boolean> => {
+    const email = (googleUser?.email || 'cliente.google@gmail.com').toLowerCase();
+    const name = googleUser?.name || 'Usuario Google';
+    const avatarUrl = googleUser?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
+
+    let found = users.find((u) => u.email.toLowerCase() === email);
+    if (!found) {
+      const id = 'user-google-' + Date.now().toString(36);
+      found = {
+        id,
+        name,
+        email,
+        role: 'client',
+        avatarUrl,
+        authProvider: 'google',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setUsers((prev) => [...prev, found!]);
+    }
+    setCurrentUser(found);
+    showToast(`Sesión iniciada con Google (${found.name})`, 'success');
+    return true;
   };
 
   // Brands CRUD
@@ -643,6 +932,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setBrands(INITIAL_BRANDS);
     setTags(INITIAL_TAGS);
     setUsers(INITIAL_USERS);
+    setMachineries(INITIAL_MACHINERY);
+    setMachineryBrands(INITIAL_MACHINERY_BRANDS);
+    setRentalRequests(INITIAL_RENTAL_REQUESTS);
     setCurrentUser(null);
     localStorage.removeItem(STORAGE_KEYS.PRODUCTS);
     localStorage.removeItem(STORAGE_KEYS.CATEGORIES);
@@ -652,6 +944,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.removeItem(STORAGE_KEYS.AUTH);
     localStorage.removeItem(STORAGE_KEYS.CLIENT_PROFILE);
     localStorage.removeItem(STORAGE_KEYS.SETTINGS);
+    localStorage.removeItem(STORAGE_KEYS.MACHINERY);
+    localStorage.removeItem(STORAGE_KEYS.MACHINERY_BRANDS);
+    localStorage.removeItem(STORAGE_KEYS.RENTAL_REQUESTS);
     setStoreSettings(STORE_INFO);
     showToast('Datos reiniciados a los valores originales de fábrica');
   };
@@ -664,6 +959,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         brands,
         tags,
         users,
+        machineries,
+        machineryBrands,
+        rentalRequests,
         currentUser,
         clientProfile,
         storeSettings,
@@ -675,12 +973,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         logout,
         switchRole,
         isAdmin,
+        registerClient,
+        loginWithGoogle,
         updateStoreSettings,
         addProduct,
         updateProduct,
         deleteProduct,
         getProductById,
         getProductBySlug,
+        addMachinery,
+        updateMachinery,
+        deleteMachinery,
+        getMachineryById,
+        addMachineryBrand,
+        updateMachineryBrand,
+        deleteMachineryBrand,
+        addRentalRequest,
+        updateRentalRequestStatus,
+        updateRentalRequest,
+        deleteRentalRequest,
         addBrand,
         updateBrand,
         deleteBrand,

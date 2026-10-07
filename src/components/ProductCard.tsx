@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Product, Category } from '../types';
 import { useStore } from '../context/StoreContext';
-import { formatCurrency } from '../utils/shareUtils';
 import { getMediaUrl } from '../utils/mediaUtils';
 import { Share2, Bookmark, ArrowRight, Package } from 'lucide-react';
 
@@ -20,7 +19,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onShare,
   onTag,
 }) => {
-  const { isProductTaggedByClient } = useStore();
+  const { isProductTaggedByClient, currentUser, isAdmin } = useStore();
   const [imageError, setImageError] = useState(false);
 
   const isTagged = isProductTaggedByClient(product.id);
@@ -29,8 +28,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   // Key attributes for fast technical reference
   const topAttribute = product.attributes && product.attributes.length > 0 ? product.attributes[0] : null;
-
-  const hasPrice = product.price !== undefined && product.price !== null && product.price > 0;
 
   return (
     <div className="group flex flex-col bg-white border border-stone-200 rounded-xl overflow-hidden hover:border-yellow-400/80 hover:shadow-md transition-all duration-200">
@@ -120,12 +117,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
 
-        {/* Title */}
+        {/* Title with Unit */}
         <h3
           onClick={() => onViewDetail(product)}
           className="text-base font-bold text-stone-900 line-clamp-2 hover:text-amber-800 transition-colors cursor-pointer leading-snug mb-2"
         >
-          {product.name}
+          <span>{product.name}</span>
+          {product.unit && (
+            <span className="ml-1.5 text-xs font-semibold text-amber-900 font-mono">
+              ({product.unit})
+            </span>
+          )}
         </h3>
 
         {/* Key Technical Parameter */}
@@ -136,28 +138,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         )}
 
-        {/* Price & Unit (Baseline aligned with Tabular Numerals) — Optional Price handling */}
-        <div className="mt-auto pt-2 border-t border-stone-100 flex items-baseline justify-between">
+        {/* Dispatch & Action (Price hidden in all views) */}
+        <div className="mt-auto pt-2 border-t border-stone-100 flex items-center justify-between">
           <div>
-            <span className="text-[11px] text-stone-400 block font-normal">
-              {hasPrice ? `Precio por ${product.unit || 'unidad'}` : 'Cotización'}
+            <span className="text-[10px] text-stone-400 block font-normal uppercase tracking-wider">
+              Despacho
             </span>
-            {hasPrice ? (
-              <span className="text-lg font-black tracking-tight text-stone-900 tabular-nums">
-                {formatCurrency(product.price!, product.currency)}
-              </span>
-            ) : (
-              <span className="text-sm font-bold text-amber-800">
-                A Cotizar / Consultar
-              </span>
-            )}
+            <span className="text-xs font-semibold text-stone-800">
+              {product.unit ? `Por ${product.unit}` : 'Directo a obra'}
+            </span>
           </div>
 
           <button
             onClick={() => onViewDetail(product)}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-stone-800 hover:text-amber-800 bg-stone-100 hover:bg-yellow-400/50 px-3 py-1.5 rounded-lg transition-colors group/btn"
+            className="inline-flex items-center gap-1 text-xs font-bold text-stone-900 bg-yellow-400 hover:bg-yellow-500 px-3 py-1.5 rounded-lg transition-colors group/btn shadow-xs"
           >
-            <span>Ficha</span>
+            <span>Ver Ficha</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
           </button>
         </div>

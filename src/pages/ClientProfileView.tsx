@@ -14,7 +14,7 @@ import {
   Check,
   Package,
 } from 'lucide-react';
-import { formatCurrency, getQuoteWhatsAppUrl, STORE_INFO } from '../utils/shareUtils';
+import { getQuoteWhatsAppUrl, STORE_INFO } from '../utils/shareUtils';
 import { getMediaUrl } from '../utils/mediaUtils';
 
 interface ClientProfileViewProps {
@@ -36,8 +36,11 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = ({
     updateClientProfile,
     untagProduct,
     showToast,
+    currentUser,
+    isAdmin,
   } = useStore();
 
+  const isManager = isAdmin() || currentUser?.role === 'staff';
   const [activeTagFilter, setActiveTagFilter] = useState<string>('all');
   const [name, setName] = useState(clientProfile.name);
   const [phone, setPhone] = useState(clientProfile.phone);
@@ -58,10 +61,6 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = ({
       (item) => item.productId === product.id && item.tag === activeTagFilter
     );
   });
-
-  // Calculate total estimated cost
-  const totalCost = filteredTaggedProducts.reduce((sum, p) => sum + (p.price || 0), 0);
-  const itemsWithoutPrice = filteredTaggedProducts.filter((p) => !p.price || p.price <= 0).length;
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,12 +223,12 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = ({
 
             {/* Quick Quote Summary Card */}
             <div className="pt-4 border-t border-stone-100 bg-stone-50 -mx-6 -mb-6 p-6 rounded-b-2xl">
-              <span className="text-xs text-stone-500 block mb-1">Total Referencial de Materiales:</span>
-              <div className="text-2xl font-black text-stone-950 tabular-nums">
-                {formatCurrency(totalCost)}
+              <span className="text-xs text-stone-500 block mb-1">Materiales para Cotizar:</span>
+              <div className="text-2xl font-black text-stone-900 tracking-tight">
+                {filteredTaggedProducts.length} material(es)
               </div>
-              <p className="text-[11px] text-stone-400 mt-1 mb-4">
-                Sujeto a flete según distancia y volumen de carga.
+              <p className="text-[11px] text-stone-500 mt-1 mb-4">
+                Cotización formal con flete directo a pie de obra vía WhatsApp.
               </p>
 
               {filteredTaggedProducts.length > 0 ? (
@@ -330,9 +329,14 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = ({
                           )}
                           <h4
                             onClick={() => onSelectProduct(prod)}
-                            className="font-bold text-sm text-stone-900 truncate hover:text-amber-800 cursor-pointer"
+                            className="font-bold text-sm text-stone-900 truncate hover:text-amber-800 cursor-pointer flex items-baseline gap-1.5"
                           >
-                            {prod.name}
+                            <span>{prod.name}</span>
+                            {prod.unit && (
+                              <span className="text-xs font-semibold text-amber-900 font-mono">
+                                ({prod.unit})
+                              </span>
+                            )}
                           </h4>
                           {(prod.brandName || prod.presentation) && (
                             <div className="text-xs text-stone-600 mt-0.5">
@@ -355,21 +359,13 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = ({
                         </div>
                       </div>
 
-                      {/* Price and Actions */}
+                      {/* Actions and Quotation Status */}
                       <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100 gap-2 shrink-0">
                         <div className="text-right">
-                          {prod.price && prod.price > 0 ? (
-                            <>
-                              <span className="text-sm font-black text-stone-900 tabular-nums">
-                                {formatCurrency(prod.price, prod.currency)}
-                              </span>
-                              <span className="text-[11px] text-stone-400 block">por {prod.unit || 'unidad'}</span>
-                            </>
-                          ) : (
-                            <span className="text-xs font-bold text-amber-800">
-                              A Cotizar
-                            </span>
-                          )}
+                          <span className="text-xs font-bold text-stone-900 block">
+                            A Cotizar
+                          </span>
+                          <span className="text-[11px] text-stone-400 block">por {prod.unit || 'unidad'}</span>
                         </div>
 
                         <div className="flex items-center gap-2">
