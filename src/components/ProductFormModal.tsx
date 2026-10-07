@@ -3,6 +3,7 @@ import { Product, ProductAttribute, ProductMedia, Brand } from '../types';
 import { useStore } from '../context/StoreContext';
 import { apiService } from '../services/apiService';
 import { getMediaUrl } from '../utils/mediaUtils';
+import { compressImageFile } from '../utils/imageUtils';
 import {
   X,
   Plus,
@@ -136,23 +137,63 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
     const fileList = Array.from(files);
     setIsUploading(true);
-    showToast(`Subiendo ${fileList.length} archivo(s) al servidor Slim PHP...`);
+    showToast(`Procesando y optimizando ${fileList.length} archivo(s)...`);
 
     try {
-      const uploadedItems = await apiService.uploadFiles(fileList);
-      const newMediaItems: ProductMedia[] = uploadedItems.map((item, idx) => ({
-        id: item.id || `med-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
-        type: item.type === 'video' ? 'video' : 'image',
-        url: item.url,
-        title: item.originalName || (item.type === 'video' ? 'Video demostrativo' : 'Foto de producto'),
-        sortOrder: mediaList.length + idx + 1,
-      }));
+      // Pre-compress images client-side to prevent network saturation and storage quota issues
+      const preparedFiles: File[] = [];
+      const fallbackItems: ProductMedia[] = [];
 
-      setMediaList((prev) => [...prev, ...newMediaItems]);
-      showToast(`${uploadedItems.length} archivo(s) guardado(s) exitosamente en el servidor`);
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        if (file.type.startsWith('image/')) {
+          try {
+            const comp = await compressImageFile(file, {
+              maxWidth: 1000,
+              maxHeight: 800,
+              quality: 0.75,
+              maxSizeBytes: 75 * 1024,
+            });
+            preparedFiles.push(comp.file);
+            fallbackItems.push({
+              id: `med-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+              type: 'image',
+              url: comp.dataUrl,
+              title: file.name,
+              sortOrder: mediaList.length + i + 1,
+            });
+          } catch {
+            preparedFiles.push(file);
+          }
+        } else {
+          preparedFiles.push(file);
+        }
+      }
+
+      try {
+        const uploadedItems = await apiService.uploadFiles(preparedFiles);
+        const newMediaItems: ProductMedia[] = uploadedItems.map((item, idx) => ({
+          id: item.id || `med-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+          type: item.type === 'video' ? 'video' : 'image',
+          url: item.url,
+          title: item.originalName || (item.type === 'video' ? 'Video demostrativo' : 'Foto de producto'),
+          sortOrder: mediaList.length + idx + 1,
+        }));
+
+        setMediaList((prev) => [...prev, ...newMediaItems]);
+        showToast(`${uploadedItems.length} archivo(s) guardado(s) exitosamente en el servidor`);
+      } catch (uploadErr) {
+        console.warn('Backend upload failed, utilizing local optimized media fallback:', uploadErr);
+        if (fallbackItems.length > 0) {
+          setMediaList((prev) => [...prev, ...fallbackItems]);
+          showToast(`${fallbackItems.length} imagen(es) optimizada(s) localmente`);
+        } else {
+          throw uploadErr;
+        }
+      }
     } catch (err: unknown) {
-      console.error('Error al subir archivos al servidor:', err);
-      const msg = err instanceof Error ? err.message : 'Error desconocido al subir archivos al servidor';
+      console.error('Error al subir archivos:', err);
+      const msg = err instanceof Error ? err.message : 'Error al subir archivos';
       showToast(msg, 'error');
     } finally {
       setIsUploading(false);

@@ -1,4 +1,4 @@
-import { Category, Product, Tag, User, Brand, Machinery, MachineryBrand, MachineryRentalRequest } from '../types';
+import { Category, Product, Tag, User, Brand, Machinery, MachineryBrand, MachineryRentalRequest, Client } from '../types';
 
 export const INITIAL_BRANDS: Brand[] = [
   {
@@ -695,6 +695,75 @@ export const INITIAL_USERS: User[] = [
   },
 ];
 
+export const INITIAL_CLIENTS: Client[] = [
+  {
+    id: 'client-1',
+    userId: 'user-client-1',
+    name: 'Arq. Mariana Ríos',
+    email: 'm.rios@constructora.com',
+    phone: '+51 945 112 233',
+    company: 'Constructora del Norte S.A.C.',
+    documentType: 'RUC',
+    documentNumber: '20459812341',
+    address: 'Av. Las Palmas 320, Huánuco',
+    notes: 'Cliente preferencial para obras de edificación y zanjas.',
+    createdAt: '2026-02-01T11:00:00Z',
+    updatedAt: '2026-03-25T16:00:00Z',
+  },
+  {
+    id: 'client-2',
+    name: 'Ing. Carlos Mendoza',
+    email: 'carlos.mendoza@elroble.com',
+    phone: '+51 984 123 456',
+    company: 'Constructora El Roble E.I.R.L.',
+    documentType: 'RUC',
+    documentNumber: '20601234567',
+    address: 'Av. Industrial 450, Huánuco',
+    notes: 'Solicita retroexcavadoras y volquetes con operador homologado.',
+    createdAt: '2026-02-10T09:00:00Z',
+    updatedAt: '2026-03-20T10:00:00Z',
+  },
+  {
+    id: 'client-3',
+    name: 'Consorcio Vial Amazónico',
+    email: 'operaciones@vialamazonico.pe',
+    phone: '+51 977 889 900',
+    company: 'Consorcio Vial Amazónico',
+    documentType: 'RUC',
+    documentNumber: '20556789123',
+    address: 'Carretera Central Km 12, Cantera La Florida',
+    notes: 'Contratos de alquiler por mes para volquetes y rodillos.',
+    createdAt: '2026-03-01T08:00:00Z',
+    updatedAt: '2026-03-22T14:00:00Z',
+  },
+  {
+    id: 'client-4',
+    name: 'Maestro Pedro Quispe',
+    email: 'pquispe.obras@gmail.com',
+    phone: '+51 961 223 344',
+    company: 'Construcciones & Acabados Quispe',
+    documentType: 'DNI',
+    documentNumber: '42895612',
+    address: 'Urb. Santa Rosa Pasaje 2, Tingo María',
+    notes: 'Alquiler de trompos y vibradores para viviendas.',
+    createdAt: '2026-03-05T12:00:00Z',
+    updatedAt: '2026-03-25T09:00:00Z',
+  },
+  {
+    id: 'client-5',
+    name: 'Contratista Juan Balbuena',
+    email: 'jbalbuena@construcciones.pe',
+    phone: '+51 950 445 566',
+    company: 'Balbuena Contratistas Generales',
+    documentType: 'RUC',
+    documentNumber: '20498765432',
+    address: 'Jr. Dos de Mayo 880, Huánuco',
+    notes: 'Alquiler de equipos de compactación para veredas y lozas.',
+    createdAt: '2026-03-12T15:00:00Z',
+    updatedAt: '2026-03-28T11:00:00Z',
+  },
+];
+
 export const INITIAL_MACHINERY: Machinery[] = [
   {
     id: 'mach-cat-420f2',
@@ -711,6 +780,11 @@ export const INITIAL_MACHINERY: Machinery[] = [
     operatingWeight: '8,500 kg',
     fuelType: 'Diesel',
     imageUrl: '/src/assets/images/backhoe_loader_1791133840461.jpg',
+    galleryImages: [
+      '/src/assets/images/backhoe_loader_1791133840461.jpg',
+      '/src/assets/images/plate_compactor_1791133888179.jpg',
+      '/src/assets/images/skid_steer_bobcat_1791133855449.jpg'
+    ],
     hourlyRate: 160.00,
     dailyRate: 1280.00,
     monthlyRate: 28000.00,
@@ -746,6 +820,10 @@ export const INITIAL_MACHINERY: Machinery[] = [
     operatingWeight: '2,900 kg',
     fuelType: 'Diesel',
     imageUrl: '/src/assets/images/skid_steer_bobcat_1791133855449.jpg',
+    galleryImages: [
+      '/src/assets/images/skid_steer_bobcat_1791133855449.jpg',
+      '/src/assets/images/backhoe_loader_1791133840461.jpg'
+    ],
     hourlyRate: 110.00,
     dailyRate: 880.00,
     monthlyRate: 18500.00,
@@ -976,6 +1054,7 @@ export const INITIAL_RENTAL_REQUESTS: MachineryRentalRequest[] = [
     machineryBrand: 'Caterpillar',
     machineryModel: '420F2 IT 4x4',
     machineryImageUrl: '/src/assets/images/backhoe_loader_1791133840461.jpg',
+    clientId: 'client-2',
     clientName: 'Ing. Carlos Mendoza (Constructora El Roble)',
     clientEmail: 'carlos.mendoza@elroble.com',
     clientPhone: '+51 984 123 456',
@@ -1000,6 +1079,7 @@ export const INITIAL_RENTAL_REQUESTS: MachineryRentalRequest[] = [
     machineryBrand: 'Bobcat',
     machineryModel: 'S570 T4',
     machineryImageUrl: '/src/assets/images/skid_steer_bobcat_1791133855449.jpg',
+    clientId: 'client-1',
     clientName: 'Arq. Mariana Ríos',
     clientEmail: 'm.rios@constructora.com',
     clientPhone: '+51 945 112 233',
@@ -1024,6 +1104,7 @@ export const INITIAL_RENTAL_REQUESTS: MachineryRentalRequest[] = [
     machineryBrand: 'Volvo',
     machineryModel: 'FMX 440 6x4 Rígido',
     machineryImageUrl: '/src/assets/images/backhoe_loader_1791133840461.jpg',
+    clientId: 'client-3',
     clientName: 'Consorcio Vial Amazónico',
     clientEmail: 'operaciones@vialamazonico.pe',
     clientPhone: '+51 977 889 900',
@@ -1048,6 +1129,7 @@ export const INITIAL_RENTAL_REQUESTS: MachineryRentalRequest[] = [
     machineryBrand: 'Honda',
     machineryModel: 'MX-1100 GX390',
     machineryImageUrl: '/src/assets/images/concrete_mixer_1791133870305.jpg',
+    clientId: 'client-4',
     clientName: 'Maestro Pedro Quispe',
     clientEmail: 'pquispe.obras@gmail.com',
     clientPhone: '+51 961 223 344',
@@ -1070,6 +1152,7 @@ export const INITIAL_RENTAL_REQUESTS: MachineryRentalRequest[] = [
     machineryBrand: 'Wacker Neuson',
     machineryModel: 'WP 1550A',
     machineryImageUrl: '/src/assets/images/plate_compactor_1791133888179.jpg',
+    clientId: 'client-5',
     clientName: 'Contratista Juan Balbuena',
     clientEmail: 'jbalbuena@construcciones.pe',
     clientPhone: '+51 950 445 566',

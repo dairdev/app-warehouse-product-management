@@ -41,6 +41,7 @@ export interface MachineryRentalRequest {
   machineryBrand?: string;
   machineryModel?: string;
   machineryImageUrl?: string;
+  clientId?: string;
   clientName: string;
   clientEmail: string;
   clientPhone: string;
@@ -57,6 +58,21 @@ export interface MachineryRentalRequest {
   approvedBy?: string;
   approvedAt?: string;
   createdAt: string;
+}
+
+export interface Client {
+  id: string;
+  userId?: string;
+  name: string;
+  email: string;
+  phone: string;
+  company?: string;
+  documentType?: 'DNI' | 'RUC' | 'CE';
+  documentNumber?: string;
+  address?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Category {

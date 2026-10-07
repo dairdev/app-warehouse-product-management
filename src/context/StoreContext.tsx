@@ -13,6 +13,7 @@ import {
   MachineryBrand,
   MachineryRentalRequest,
   RentalRequestStatus,
+  Client,
 } from '../types';
 import {
   INITIAL_PRODUCTS,
@@ -23,9 +24,16 @@ import {
   INITIAL_MACHINERY,
   INITIAL_MACHINERY_BRANDS,
   INITIAL_RENTAL_REQUESTS,
+  INITIAL_CLIENTS,
 } from '../data/initialData';
 import { STORE_INFO } from '../utils/shareUtils';
 import { apiService, SlimHealthResponse } from '../services/apiService';
+import {
+  safeLocalStorageSetItem,
+  sanitizeStorageValue,
+  purgeStaleStorage,
+  sanitizeAllStorageKeys,
+} from '../utils/storageUtils';
 
 interface ToastMessage {
   id: string;
@@ -105,6 +113,13 @@ interface StoreContextType {
   updateRentalRequest: (id: string, data: Partial<MachineryRentalRequest>) => boolean;
   deleteRentalRequest: (id: string) => boolean;
 
+  // Clients CRUD (Gestión de Clientes)
+  clients: Client[];
+  addClient: (client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>) => Client;
+  updateClient: (id: string, data: Partial<Client>) => boolean;
+  deleteClient: (id: string) => boolean;
+  getClientById: (id: string) => Client | undefined;
+
   // Brands CRUD
   addBrand: (brand: Omit<Brand, 'id'>) => Brand;
   updateBrand: (id: string, data: Partial<Brand>) => boolean;
@@ -151,6 +166,7 @@ const STORAGE_KEYS = {
   MACHINERY: 'almacenes_machinery_v2',
   MACHINERY_BRANDS: 'almacenes_machinery_brands_v2',
   RENTAL_REQUESTS: 'almacenes_rental_requests_v2',
+  CLIENTS: 'almacenes_clients_v2',
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -168,7 +184,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [machineries, setMachineries] = useState<Machinery[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.MACHINERY);
-      return saved ? JSON.parse(saved) : INITIAL_MACHINERY;
+      if (saved) {
+        const sanitized = sanitizeStorageValue(saved);
+        if (sanitized !== saved) {
+          safeLocalStorageSetItem(STORAGE_KEYS.MACHINERY, sanitized);
+        }
+        return JSON.parse(sanitized);
+      }
+      return INITIAL_MACHINERY;
     } catch {
       return INITIAL_MACHINERY;
     }
@@ -198,7 +221,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [products, setProducts] = useState<Product[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-      return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+      if (saved) {
+        const sanitized = sanitizeStorageValue(saved);
+        if (sanitized !== saved) {
+          safeLocalStorageSetItem(STORAGE_KEYS.PRODUCTS, sanitized);
+        }
+        return JSON.parse(sanitized);
+      }
+      return INITIAL_PRODUCTS;
     } catch {
       return INITIAL_PRODUCTS;
     }
@@ -244,6 +274,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
+  // Registered Clients
+  const [clients, setClients] = useState<Client[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.CLIENTS);
+      return saved ? JSON.parse(saved) : INITIAL_CLIENTS;
+    } catch {
+      return INITIAL_CLIENTS;
+    }
+  });
+
   // Backend state
   const [backendStatus, setBackendStatus] = useState<'online' | 'connecting' | 'offline'>('connecting');
   const [backendInfo, setBackendInfo] = useState<SlimHealthResponse | null>(null);
@@ -284,53 +324,63 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Persist state
+  // Clean up stale or legacy keys and purge oversized bloat on app mount
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+    purgeStaleStorage();
+    sanitizeAllStorageKeys();
+  }, []);
+
+  // Persist state safely with quota protection
+  useEffect(() => {
+    safeLocalStorageSetItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
+    safeLocalStorageSetItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
   }, [categories]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.BRANDS, JSON.stringify(brands));
+    safeLocalStorageSetItem(STORAGE_KEYS.BRANDS, JSON.stringify(brands));
   }, [brands]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.TAGS, JSON.stringify(tags));
+    safeLocalStorageSetItem(STORAGE_KEYS.TAGS, JSON.stringify(tags));
   }, [tags]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    safeLocalStorageSetItem(STORAGE_KEYS.USERS, JSON.stringify(users));
   }, [users]);
 
   useEffect(() => {
     if (currentUser) {
-      localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(currentUser));
+      safeLocalStorageSetItem(STORAGE_KEYS.AUTH, JSON.stringify(currentUser));
     } else {
       localStorage.removeItem(STORAGE_KEYS.AUTH);
     }
   }, [currentUser]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CLIENT_PROFILE, JSON.stringify(clientProfile));
+    safeLocalStorageSetItem(STORAGE_KEYS.CLIENT_PROFILE, JSON.stringify(clientProfile));
   }, [clientProfile]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.MACHINERY, JSON.stringify(machineries));
+    safeLocalStorageSetItem(STORAGE_KEYS.MACHINERY, JSON.stringify(machineries));
   }, [machineries]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.MACHINERY_BRANDS, JSON.stringify(machineryBrands));
+    safeLocalStorageSetItem(STORAGE_KEYS.MACHINERY_BRANDS, JSON.stringify(machineryBrands));
   }, [machineryBrands]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.RENTAL_REQUESTS, JSON.stringify(rentalRequests));
+    safeLocalStorageSetItem(STORAGE_KEYS.RENTAL_REQUESTS, JSON.stringify(rentalRequests));
   }, [rentalRequests]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(storeSettings));
+    safeLocalStorageSetItem(STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
+  }, [clients]);
+
+  useEffect(() => {
+    safeLocalStorageSetItem(STORAGE_KEYS.SETTINGS, JSON.stringify(storeSettings));
 
     // Dynamic favicon: update with custom store logo if available, otherwise keep default logo favicon
     const faviconElement = document.getElementById('app-favicon') as HTMLLinkElement | null;
@@ -660,6 +710,38 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return true;
   };
 
+  // Clients CRUD (Gestión Comercial de Clientes)
+  const addClient = (clientData: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>): Client => {
+    const id = 'client-' + Date.now().toString(36);
+    const newClient: Client = {
+      ...clientData,
+      id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setClients((prev) => [newClient, ...prev]);
+    showToast(`Cliente "${newClient.name}" registrado correctamente`, 'success');
+    return newClient;
+  };
+
+  const updateClient = (id: string, data: Partial<Client>): boolean => {
+    setClients((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...data, updatedAt: new Date().toISOString() } : c))
+    );
+    showToast('Datos del cliente actualizados', 'success');
+    return true;
+  };
+
+  const deleteClient = (id: string): boolean => {
+    setClients((prev) => prev.filter((c) => c.id !== id));
+    showToast('Cliente retirado del sistema', 'info');
+    return true;
+  };
+
+  const getClientById = (id: string) => {
+    return clients.find((c) => c.id === id);
+  };
+
   // Client Registration & Google Auth
   const registerClient = async (data: {
     name: string;
@@ -688,6 +770,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updatedAt: new Date().toISOString(),
     };
     setUsers((prev) => [...prev, newUser]);
+
+    // Also register or sync in clients list if not present
+    const clientId = 'client-' + Date.now().toString(36);
+    const newClientRecord: Client = {
+      id: clientId,
+      userId: id,
+      name: newUser.name,
+      email: newUser.email,
+      phone: newUser.phone || '',
+      company: newUser.company || '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setClients((prev) => {
+      const match = prev.find((c) => c.email.toLowerCase() === newUser.email.toLowerCase());
+      if (match) {
+        return prev.map((c) => (c.id === match.id ? { ...c, userId: id } : c));
+      }
+      return [newClientRecord, ...prev];
+    });
+
     setCurrentUser(newUser);
     showToast(`¡Bienvenido(a), ${newUser.name}! Tu cuenta de cliente ha sido creada.`, 'success');
     return true;
@@ -932,6 +1035,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setBrands(INITIAL_BRANDS);
     setTags(INITIAL_TAGS);
     setUsers(INITIAL_USERS);
+    setClients(INITIAL_CLIENTS);
     setMachineries(INITIAL_MACHINERY);
     setMachineryBrands(INITIAL_MACHINERY_BRANDS);
     setRentalRequests(INITIAL_RENTAL_REQUESTS);
@@ -941,6 +1045,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.removeItem(STORAGE_KEYS.BRANDS);
     localStorage.removeItem(STORAGE_KEYS.TAGS);
     localStorage.removeItem(STORAGE_KEYS.USERS);
+    localStorage.removeItem(STORAGE_KEYS.CLIENTS);
     localStorage.removeItem(STORAGE_KEYS.AUTH);
     localStorage.removeItem(STORAGE_KEYS.CLIENT_PROFILE);
     localStorage.removeItem(STORAGE_KEYS.SETTINGS);
@@ -959,6 +1064,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         brands,
         tags,
         users,
+        clients,
         machineries,
         machineryBrands,
         rentalRequests,
@@ -992,6 +1098,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateRentalRequestStatus,
         updateRentalRequest,
         deleteRentalRequest,
+        addClient,
+        updateClient,
+        deleteClient,
+        getClientById,
         addBrand,
         updateBrand,
         deleteBrand,

@@ -35,6 +35,8 @@ export const MachineryRentalManagement: React.FC = () => {
     rentalRequests,
     machineries,
     currentUser,
+    clients,
+    addClient,
     addRentalRequest,
     updateRentalRequestStatus,
     updateRentalRequest,
@@ -60,6 +62,7 @@ export const MachineryRentalManagement: React.FC = () => {
   const [formMachineryId, setFormMachineryId] = useState<string>(
     machineries[0]?.id || ''
   );
+  const [formClientId, setFormClientId] = useState<string>('');
   const [formClientName, setFormClientName] = useState('');
   const [formClientEmail, setFormClientEmail] = useState('');
   const [formClientPhone, setFormClientPhone] = useState('');
@@ -72,6 +75,16 @@ export const MachineryRentalManagement: React.FC = () => {
   const [formNeedsOperator, setFormNeedsOperator] = useState(true);
   const [formStatus, setFormStatus] = useState<RentalRequestStatus>('pending');
   const [formNotes, setFormNotes] = useState('');
+
+  // Quick Client modal state inside rental form
+  const [isQuickClientModalOpen, setIsQuickClientModalOpen] = useState(false);
+  const [qcName, setQcName] = useState('');
+  const [qcEmail, setQcEmail] = useState('');
+  const [qcPhone, setQcPhone] = useState('');
+  const [qcCompany, setQcCompany] = useState('');
+  const [qcDocumentType, setQcDocumentType] = useState<'DNI' | 'RUC' | 'CE'>('RUC');
+  const [qcDocumentNumber, setQcDocumentNumber] = useState('');
+  const [qcAddress, setQcAddress] = useState('');
 
   // Counts for status tabs
   const pendingCount = useMemo(
@@ -166,13 +179,72 @@ export const MachineryRentalManagement: React.FC = () => {
     }
   };
 
+  const handleSelectClient = (clientId: string) => {
+    setFormClientId(clientId);
+    const client = clients.find((c) => c.id === clientId);
+    if (client) {
+      setFormClientName(client.name);
+      setFormClientEmail(client.email);
+      setFormClientPhone(client.phone);
+      if (client.address && !formObraLocation) {
+        setFormObraLocation(client.address);
+      }
+    }
+  };
+
+  const handleSaveQuickClient = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!qcName.trim() || !qcPhone.trim()) {
+      showToast('Nombre y teléfono son obligatorios', 'error');
+      return;
+    }
+    const created = addClient({
+      name: qcName.trim(),
+      email: qcEmail.trim().toLowerCase() || `${qcName.toLowerCase().replace(/[^a-z0-9]/g, '')}@obra.pe`,
+      phone: qcPhone.trim(),
+      company: qcCompany.trim() || undefined,
+      documentType: qcDocumentType,
+      documentNumber: qcDocumentNumber.trim() || undefined,
+      address: qcAddress.trim() || undefined,
+    });
+
+    // Auto-select the newly registered client
+    setFormClientId(created.id);
+    setFormClientName(created.name);
+    setFormClientEmail(created.email);
+    setFormClientPhone(created.phone);
+    if (created.address) {
+      setFormObraLocation(created.address);
+    }
+    setIsQuickClientModalOpen(false);
+
+    // Reset quick form fields
+    setQcName('');
+    setQcEmail('');
+    setQcPhone('');
+    setQcCompany('');
+    setQcDocumentNumber('');
+    setQcAddress('');
+    showToast(`Cliente "${created.name}" registrado y seleccionado`, 'success');
+  };
+
   const handleOpenAddModal = () => {
     setEditingRequest(null);
     setFormMachineryId(machineries[0]?.id || '');
-    setFormClientName('');
-    setFormClientEmail('');
-    setFormClientPhone('');
-    setFormObraLocation('');
+    const firstClient = clients[0];
+    if (firstClient) {
+      setFormClientId(firstClient.id);
+      setFormClientName(firstClient.name);
+      setFormClientEmail(firstClient.email);
+      setFormClientPhone(firstClient.phone);
+      setFormObraLocation(firstClient.address || '');
+    } else {
+      setFormClientId('');
+      setFormClientName('');
+      setFormClientEmail('');
+      setFormClientPhone('');
+      setFormObraLocation('');
+    }
     setFormStartDate('2026-10-10');
     setFormEndDate('2026-10-12');
     setFormStartHour('08:00');
@@ -189,10 +261,20 @@ export const MachineryRentalManagement: React.FC = () => {
   const handleCreateForDay = (dateStr: string) => {
     setEditingRequest(null);
     setFormMachineryId(machineries[0]?.id || '');
-    setFormClientName('');
-    setFormClientEmail('');
-    setFormClientPhone('');
-    setFormObraLocation('');
+    const firstClient = clients[0];
+    if (firstClient) {
+      setFormClientId(firstClient.id);
+      setFormClientName(firstClient.name);
+      setFormClientEmail(firstClient.email);
+      setFormClientPhone(firstClient.phone);
+      setFormObraLocation(firstClient.address || '');
+    } else {
+      setFormClientId('');
+      setFormClientName('');
+      setFormClientEmail('');
+      setFormClientPhone('');
+      setFormObraLocation('');
+    }
     setFormStartDate(dateStr);
     setFormEndDate(dateStr);
     setFormStartHour('08:00');
@@ -220,6 +302,10 @@ export const MachineryRentalManagement: React.FC = () => {
   const handleOpenEditModal = (req: MachineryRentalRequest) => {
     setEditingRequest(req);
     setFormMachineryId(req.machineryId);
+    const matched = req.clientId
+      ? clients.find((c) => c.id === req.clientId)
+      : clients.find((c) => c.email.toLowerCase() === req.clientEmail.toLowerCase() || c.name.toLowerCase() === req.clientName.toLowerCase());
+    setFormClientId(matched ? matched.id : (req.clientId || ''));
     setFormClientName(req.clientName);
     setFormClientEmail(req.clientEmail);
     setFormClientPhone(req.clientPhone);
@@ -244,7 +330,7 @@ export const MachineryRentalManagement: React.FC = () => {
     }
 
     if (!formClientName.trim() || !formClientPhone.trim() || !formObraLocation.trim()) {
-      showToast('Por favor ingrese el cliente, teléfono y ubicación de la obra', 'error');
+      showToast('Por favor seleccione un cliente o complete los datos obligatorios', 'error');
       return;
     }
 
@@ -255,6 +341,7 @@ export const MachineryRentalManagement: React.FC = () => {
         machineryBrand: mach.brand,
         machineryModel: mach.model,
         machineryImageUrl: mach.imageUrl,
+        clientId: formClientId || undefined,
         clientName: formClientName.trim(),
         clientEmail: formClientEmail.trim() || 'cliente@obra.pe',
         clientPhone: formClientPhone.trim(),
@@ -276,6 +363,7 @@ export const MachineryRentalManagement: React.FC = () => {
         machineryBrand: mach.brand,
         machineryModel: mach.model,
         machineryImageUrl: mach.imageUrl,
+        clientId: formClientId || undefined,
         clientName: formClientName.trim(),
         clientEmail: formClientEmail.trim() || 'cliente@obra.pe',
         clientPhone: formClientPhone.trim(),
@@ -1159,12 +1247,42 @@ export const MachineryRentalManagement: React.FC = () => {
                 </select>
               </div>
 
-              {/* Client information */}
+              {/* Client selector with [New Client] button */}
               <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-2.5">
-                <span className="font-bold text-stone-800 text-[11px] uppercase tracking-wider block">
-                  Datos del Cliente / Contratista
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-stone-800 text-[11px] uppercase tracking-wider block">
+                    Cliente / Contratista *
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsQuickClientModalOpen(true)}
+                    className="px-2.5 py-1 bg-yellow-400 hover:bg-yellow-500 text-stone-950 rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-xs transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Nuevo Cliente</span>
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-stone-600 mb-1">
+                    Seleccionar de la lista de Clientes Registrados:
+                  </label>
+                  <select
+                    value={formClientId}
+                    onChange={(e) => handleSelectClient(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-yellow-400 font-semibold text-stone-900 bg-white"
+                  >
+                    <option value="">-- Seleccionar Cliente Registrado --</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.company ? `(${c.company})` : ''} - {c.phone}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Pre-filled and editable details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                   <div>
                     <label className="block font-semibold text-stone-700 mb-1">
                       Nombre o Razón Social *
@@ -1189,7 +1307,7 @@ export const MachineryRentalManagement: React.FC = () => {
                       value={formClientPhone}
                       onChange={(e) => setFormClientPhone(e.target.value)}
                       placeholder="+51 987 654 321"
-                      className="w-full px-3 py-1.5 rounded-lg border border-stone-300 bg-white"
+                      className="w-full px-3 py-1.5 rounded-lg border border-stone-300 bg-white font-mono"
                     />
                   </div>
 
@@ -1354,6 +1472,131 @@ export const MachineryRentalManagement: React.FC = () => {
                 >
                   <Check className="w-4 h-4" />
                   <span>{editingRequest ? 'Guardar Cambios' : 'Ingresar Solicitud'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK NEW CLIENT MODAL (OVERLAY) */}
+      {isQuickClientModalOpen && (
+        <div className="fixed inset-0 z-60 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-5 py-3.5 border-b border-stone-100 flex items-center justify-between shrink-0 bg-stone-50/70">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-yellow-400 text-stone-950 flex items-center justify-center font-bold">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <h3 className="font-extrabold text-stone-900 text-sm">
+                  Registrar Nuevo Cliente
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsQuickClientModalOpen(false)}
+                className="p-1 text-stone-400 hover:text-stone-700 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveQuickClient} className="p-5 overflow-y-auto space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-stone-700 mb-1">
+                  Nombre o Razón Social *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={qcName}
+                  onChange={(e) => setQcName(e.target.value)}
+                  placeholder="Ej: Constructora El Roble / Ing. Juan"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-yellow-400 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">
+                    Teléfono / WhatsApp *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={qcPhone}
+                    onChange={(e) => setQcPhone(e.target.value)}
+                    placeholder="+51 987 654 321"
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">
+                    Correo Electrónico
+                  </label>
+                  <input
+                    type="email"
+                    value={qcEmail}
+                    onChange={(e) => setQcEmail(e.target.value)}
+                    placeholder="contacto@obra.pe"
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">
+                    Empresa (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={qcCompany}
+                    onChange={(e) => setQcCompany(e.target.value)}
+                    placeholder="Ej: Consorcio Vial"
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">
+                    RUC / DNI
+                  </label>
+                  <input
+                    type="text"
+                    value={qcDocumentNumber}
+                    onChange={(e) => setQcDocumentNumber(e.target.value)}
+                    placeholder="20601234567"
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-stone-700 mb-1">
+                  Dirección u Obra Habitual
+                </label>
+                <input
+                  type="text"
+                  value={qcAddress}
+                  onChange={(e) => setQcAddress(e.target.value)}
+                  placeholder="Ej: Av. Industrial 450, Huánuco"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-300"
+                />
+              </div>
+
+              <div className="pt-2 border-t border-stone-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsQuickClientModalOpen(false)}
+                  className="px-3.5 py-1.5 text-stone-600 hover:text-stone-900"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-stone-950 font-bold rounded-xl"
+                >
+                  Guardar y Asignar
                 </button>
               </div>
             </form>

@@ -66,3 +66,28 @@ INSERT INTO product_attributes (id, product_id, `key`, `value`, unit) VALUES
 ('pa-10', 'prod-3', 'Límite de Fluencia (fy)', '420 MPa (4,200 kg/cm²)', 'kg/cm²'),
 ('pa-11', 'prod-4', 'Densidad aparente', '1,550 kg/m³', 'kg/m³'),
 ('pa-12', 'prod-5', 'Tamaño Máximo Nominal', '1/2 pulgada (12.5 mm)', 'pulg');
+
+-- 7. Marcas de Maquinaria
+INSERT INTO machinery_brands (id, name, slug, category, description) VALUES
+('mbr-cat', 'Caterpillar', 'caterpillar', 'pesada', 'Líder mundial en maquinaria pesada de movimiento de tierras y excavación.'),
+('mbr-bobcat', 'Bobcat', 'bobcat', 'liviana', 'Especialistas en minicargadores compactos y excavadoras utilitarias.'),
+('mbr-volvo', 'Volvo Construction', 'volvo-construction', 'pesada', 'Equipos pesados para construcción y camiones volquetes de alta gama.'),
+('mbr-cifa', 'Cifa / Imer', 'cifa-imer', 'concreto', 'Hormigoneras, bombas estacionarias y mezcladoras de concreto.');
+
+-- 8. Cartera Comercial de Clientes
+INSERT INTO clients (id, name, email, phone, company, document_type, document_number, address) VALUES
+('client-1', 'Ing. Carlos Mendoza R.', 'cmendoza@consorciohuallaga.pe', '+51 962 443 112', 'Consorcio Vial Huallaga S.A.C.', 'RUC', '20601234567', 'Av. Esteban Pavletich 450, Huánuco'),
+('client-2', 'Constructora Los Andes E.I.R.L.', 'proyectos@losandesconstructora.pe', '+51 945 112 233', 'Constructora Los Andes E.I.R.L.', 'RUC', '20509876543', 'Jr. Dos de Mayo 780, Amarilis'),
+('client-3', 'Maestro Roberto Quispe', 'roberto.obra@gmail.com', '+51 991 882 334', 'Contratista Independiente', 'DNI', '42567891', 'Mz. F Lote 14, Paucarbamba');
+
+-- 9. Maquinaria y Equipos de Construcción (Alquiler)
+INSERT INTO machineries (id, name, category, category_name, brand, brand_id, model, year, power, capacity, fuel_type, includes_operator, min_rental_hours, image_url, photos, is_available) VALUES
+('mach-cat-420f2', 'Retroexcavadora Caterpillar 420F2 4x4', 'pesada', 'Maquinaria Pesada', 'Caterpillar', 'mbr-cat', '420F2 IT', 2022, '93 HP', 'Cucharón 1.0 m³', 'Diésel', 1, 8, 'https://images.unsplash.com/photo-1579829366248-204fe8413f31?w=800&auto=format&fit=crop&q=80', '["https://images.unsplash.com/photo-1579829366248-204fe8413f31?w=800&auto=format&fit=crop&q=80", "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80"]', 1),
+('mach-bob-s570', 'Minicargador Bobcat S570 Compacto', 'liviana', 'Maquinaria Liviana', 'Bobcat', 'mbr-bobcat', 'S570', 2023, '61 HP', 'Carga útil 885 kg', 'Diésel', 1, 6, 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80', '["https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80"]', 1),
+('mach-volvo-fmx', 'Camión Volquete Volvo FMX 15 m³', 'transporte', 'Transporte & Volquetes', 'Volvo Construction', 'mbr-volvo', 'FMX 440 6x4', 2021, '440 HP', 'Tolva 15 m³ (28 TN)', 'Diésel', 1, 8, 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=800&auto=format&fit=crop&q=80', '["https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=800&auto=format&fit=crop&q=80"]', 1);
+
+-- 10. Solicitudes de Alquiler de Maquinaria
+INSERT INTO machinery_rental_requests (id, machinery_id, machinery_name, machinery_brand, machinery_model, client_id, client_name, client_email, client_phone, obra_location, start_date, end_date, start_hour, end_hour, total_hours_or_days, needs_operator, created_by, status) VALUES
+('rent-req-101', 'mach-cat-420f2', 'Retroexcavadora Caterpillar 420F2 4x4', 'Caterpillar', '420F2 IT', 'client-1', 'Consorcio Vial Huallaga S.A.C.', 'cmendoza@consorciohuallaga.pe', '+51 962 443 112', 'Carretera Huánuco - La Unión Km 18', '2026-04-10', '2026-04-15', '07:30', '17:30', '5 días de jornada completa', 1, 'admin', 'approved'),
+('rent-req-102', 'mach-bob-s570', 'Minicargador Bobcat S570 Compacto', 'Bobcat', 'S570', 'client-2', 'Constructora Los Andes E.I.R.L.', 'proyectos@losandesconstructora.pe', '+51 945 112 233', 'Jr. Crespo Castillo 340 - Edificio Residencial', '2026-04-12', '2026-04-14', '08:00', '16:00', '2 días (16 horas operativas)', 1, 'client', 'pending');
+

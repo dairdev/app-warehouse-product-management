@@ -7,6 +7,7 @@
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS audit_log;
 DROP TABLE IF EXISTS machinery_rental_requests;
+DROP TABLE IF EXISTS clients;
 DROP TABLE IF EXISTS machineries;
 DROP TABLE IF EXISTS machinery_brands;
 DROP TABLE IF EXISTS product_tags;
@@ -139,7 +140,28 @@ CREATE TABLE machineries (
     INDEX idx_machineries_brand (brand)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5.3 Solicitudes de Alquiler de Maquinaria (Gestión y Calendario de Reservas)
+-- 5.3 Cartera Comercial de Clientes (Gestión, RUC/DNI, Obras y Alquileres)
+CREATE TABLE clients (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    email VARCHAR(191) NOT NULL,
+    phone VARCHAR(50) NOT NULL,
+    company VARCHAR(150) NULL,
+    document_type ENUM('DNI', 'RUC', 'CE') DEFAULT 'RUC',
+    document_number VARCHAR(30) NULL,
+    address TEXT NULL,
+    notes TEXT NULL,
+    user_id VARCHAR(36) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_clients_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_clients_email (email),
+    INDEX idx_clients_phone (phone),
+    INDEX idx_clients_document (document_number),
+    INDEX idx_clients_company (company)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5.4 Solicitudes de Alquiler de Maquinaria (Gestión y Calendario de Reservas)
 CREATE TABLE machinery_rental_requests (
     id VARCHAR(100) PRIMARY KEY,
     machinery_id VARCHAR(100) NOT NULL,
@@ -147,6 +169,7 @@ CREATE TABLE machinery_rental_requests (
     machinery_brand VARCHAR(150) NULL,
     machinery_model VARCHAR(100) NULL,
     machinery_image_url TEXT NULL,
+    client_id VARCHAR(100) NULL,
     client_name VARCHAR(150) NOT NULL,
     client_email VARCHAR(191) NOT NULL,
     client_phone VARCHAR(50) NOT NULL,
@@ -165,9 +188,11 @@ CREATE TABLE machinery_rental_requests (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_rentals_machinery FOREIGN KEY (machinery_id) REFERENCES machineries(id) ON DELETE CASCADE,
+    CONSTRAINT fk_rentals_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
     INDEX idx_rentals_status (status),
     INDEX idx_rentals_dates (start_date, end_date),
-    INDEX idx_rentals_machinery (machinery_id)
+    INDEX idx_rentals_machinery (machinery_id),
+    INDEX idx_rentals_client (client_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. Productos de Construcción

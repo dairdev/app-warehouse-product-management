@@ -6,6 +6,7 @@ import { MachineryFormModal } from '../components/MachineryFormModal';
 import { SlimApiStatusTab } from '../components/SlimApiStatusTab';
 import { MachineryRentalManagement } from '../components/MachineryRentalManagement';
 import { MachineryBrandManagement } from '../components/MachineryBrandManagement';
+import { ClientManagement } from '../components/ClientManagement';
 import { downloadFullCatalogPdf } from '../utils/pdfExport';
 import {
   Package,
@@ -59,6 +60,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     machineryBrands,
     rentalRequests,
     users,
+    clients,
     currentUser,
     clientProfile,
     storeSettings,
@@ -79,7 +81,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<
-    'products' | 'machinery' | 'rentals' | 'machinery-brands' | 'categories' | 'brands' | 'users' | 'settings' | 'export' | 'api'
+    'products' | 'machinery' | 'rentals' | 'clients' | 'machinery-brands' | 'categories' | 'brands' | 'users' | 'settings' | 'export' | 'api'
   >('products');
 
   const pendingRentalsCount = rentalRequests.filter((r) => r.status === 'pending').length;
@@ -526,6 +528,17 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 {rentalRequests.length}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => setActiveTab('clients')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === 'clients'
+                ? 'border-yellow-400 text-white'
+                : 'border-transparent text-stone-400 hover:text-stone-200'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5 text-yellow-400" />
+            <span>Clientes ({clients.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('machinery-brands')}
@@ -986,6 +999,11 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         {/* TAB: RENTAL APPLICATIONS MANAGEMENT & CALENDAR */}
         {activeTab === 'rentals' && (
           <MachineryRentalManagement />
+        )}
+
+        {/* TAB: CLIENTS MANAGEMENT */}
+        {activeTab === 'clients' && (
+          <ClientManagement />
         )}
 
         {/* TAB: MACHINERY BRANDS MANAGEMENT */}
