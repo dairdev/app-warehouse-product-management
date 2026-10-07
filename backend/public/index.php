@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 use App\Controllers\BrandController;
 use App\Controllers\CategoryController;
+use App\Controllers\ClientController;
 use App\Controllers\HealthController;
+use App\Controllers\MachineryBrandController;
+use App\Controllers\MachineryController;
 use App\Controllers\ProductController;
+use App\Controllers\RentalRequestController;
 use App\Controllers\SettingsController;
 use App\Controllers\TagController;
 use App\Controllers\UploadController;
@@ -234,6 +238,34 @@ $registerApiRoutes = function (RouteCollectorProxy $group): void {
     // Tags
     $group->get('/tags', [TagController::class, 'list']);
     $group->post('/tags', [TagController::class, 'create']);
+
+    // Clients Commercial Management (CRUD)
+    $group->get('/clients', [ClientController::class, 'list']);
+    $group->get('/clients/{id}', [ClientController::class, 'get']);
+    $group->post('/clients', [ClientController::class, 'create']);
+    $group->put('/clients/{id}', [ClientController::class, 'update']);
+    $group->delete('/clients/{id}', [ClientController::class, 'delete']);
+
+    // Machinery Fleet (CRUD)
+    $group->get('/machinery', [MachineryController::class, 'list']);
+    $group->get('/machinery/{id}', [MachineryController::class, 'get']);
+    $group->post('/machinery', [MachineryController::class, 'create']);
+    $group->put('/machinery/{id}', [MachineryController::class, 'update']);
+    $group->delete('/machinery/{id}', [MachineryController::class, 'delete']);
+
+    // Machinery Brands (CRUD)
+    $group->get('/machinery-brands', [MachineryBrandController::class, 'list']);
+    $group->get('/machinery-brands/{id}', [MachineryBrandController::class, 'get']);
+    $group->post('/machinery-brands', [MachineryBrandController::class, 'create']);
+    $group->put('/machinery-brands/{id}', [MachineryBrandController::class, 'update']);
+    $group->delete('/machinery-brands/{id}', [MachineryBrandController::class, 'delete']);
+
+    // Rental Requests & Scheduling (CRUD)
+    $group->get('/rental-requests', [RentalRequestController::class, 'list']);
+    $group->get('/rental-requests/{id}', [RentalRequestController::class, 'get']);
+    $group->post('/rental-requests', [RentalRequestController::class, 'create']);
+    $group->put('/rental-requests/{id}', [RentalRequestController::class, 'update']);
+    $group->delete('/rental-requests/{id}', [RentalRequestController::class, 'delete']);
 
     // File / Media Uploads (Slim PHP Multipart)
     $group->post('/upload', [UploadController::class, 'upload']);

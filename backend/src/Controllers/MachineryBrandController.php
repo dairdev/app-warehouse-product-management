@@ -7,7 +7,7 @@ use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
-class BrandController extends BaseController
+class MachineryBrandController extends BaseController
 {
     private PDO $db;
 
@@ -18,7 +18,7 @@ class BrandController extends BaseController
 
     public function list(Request $request, Response $response): Response
     {
-        $stmt = $this->db->query("SELECT * FROM brands ORDER BY name ASC");
+        $stmt = $this->db->query("SELECT * FROM machinery_brands ORDER BY name ASC");
         $rows = $stmt->fetchAll();
 
         return $this->jsonResponse($response, [
@@ -31,12 +31,12 @@ class BrandController extends BaseController
     public function get(Request $request, Response $response, array $args): Response
     {
         $id = $args['id'] ?? '';
-        $stmt = $this->db->prepare("SELECT * FROM brands WHERE id = :id OR slug = :slug LIMIT 1");
+        $stmt = $this->db->prepare("SELECT * FROM machinery_brands WHERE id = :id OR slug = :slug LIMIT 1");
         $stmt->execute([':id' => $id, ':slug' => $id]);
         $row = $stmt->fetch();
 
         if (!$row) {
-            return $this->errorResponse($response, 'Marca no encontrada', 404);
+            return $this->errorResponse($response, 'Marca de maquinaria no encontrada', 404);
         }
 
         return $this->jsonResponse($response, [
@@ -51,24 +51,26 @@ class BrandController extends BaseController
         $name = trim($body['name'] ?? '');
 
         if (empty($name)) {
-            return $this->errorResponse($response, 'El nombre de la marca es obligatorio', 422);
+            return $this->errorResponse($response, 'El nombre de la marca de maquinaria es obligatorio', 422);
         }
 
-        $id = !empty($body['id']) ? trim($body['id']) : 'brand-' . uniqid();
+        $id = !empty($body['id']) ? trim($body['id']) : 'mbr-' . uniqid();
         $slug = !empty($body['slug']) ? trim($body['slug']) : $this->generateSlug($name);
+        $category = !empty($body['category']) ? trim($body['category']) : 'pesada';
         $description = trim($body['description'] ?? '');
         $logoUrl = !empty($body['logoUrl']) ? trim($body['logoUrl']) : null;
         $now = date('c');
 
         $stmt = $this->db->prepare("
-            INSERT INTO brands (id, name, slug, description, logo_url, created_at)
-            VALUES (:id, :name, :slug, :description, :logo_url, :created_at)
+            INSERT INTO machinery_brands (id, name, slug, category, description, logo_url, created_at)
+            VALUES (:id, :name, :slug, :category, :description, :logo_url, :created_at)
         ");
 
         $stmt->execute([
             ':id' => $id,
             ':name' => $name,
             ':slug' => $slug,
+            ':category' => $category,
             ':description' => $description,
             ':logo_url' => $logoUrl,
             ':created_at' => $now,
@@ -80,25 +82,26 @@ class BrandController extends BaseController
     public function update(Request $request, Response $response, array $args): Response
     {
         $id = $args['id'] ?? '';
-        $stmt = $this->db->prepare("SELECT * FROM brands WHERE id = :id LIMIT 1");
+        $stmt = $this->db->prepare("SELECT * FROM machinery_brands WHERE id = :id LIMIT 1");
         $stmt->execute([':id' => $id]);
         $existing = $stmt->fetch();
 
         if (!$existing) {
-            return $this->errorResponse($response, 'Marca no encontrada', 404);
+            return $this->errorResponse($response, 'Marca de maquinaria no encontrada', 404);
         }
 
         $body = (array)$request->getParsedBody();
         $name = isset($body['name']) ? trim($body['name']) : $existing['name'];
         $slug = isset($body['slug']) ? trim($body['slug']) : $existing['slug'];
+        $category = isset($body['category']) ? trim($body['category']) : $existing['category'];
         $description = isset($body['description']) ? trim($body['description']) : $existing['description'];
-        $origin = isset($body['origin']) ? trim($body['origin']) : $existing['origin'];
         $logoUrl = array_key_exists('logoUrl', $body) ? trim((string)$body['logoUrl']) : $existing['logo_url'];
 
         $updateStmt = $this->db->prepare("
-            UPDATE brands SET
+            UPDATE machinery_brands SET
                 name = :name,
                 slug = :slug,
+                category = :category,
                 description = :description,
                 logo_url = :logo_url
             WHERE id = :id
@@ -107,6 +110,7 @@ class BrandController extends BaseController
         $updateStmt->execute([
             ':name' => $name,
             ':slug' => $slug,
+            ':category' => $category,
             ':description' => $description,
             ':logo_url' => $logoUrl ?: null,
             ':id' => $id,
@@ -119,24 +123,12 @@ class BrandController extends BaseController
     {
         $id = $args['id'] ?? '';
 
-        $prodCheck = $this->db->prepare("SELECT COUNT(*) FROM products WHERE brand_id = :id");
-        $prodCheck->execute([':id' => $id]);
-        $prodCount = (int)$prodCheck->fetchColumn();
-
-        if ($prodCount > 0) {
-            return $this->errorResponse(
-                $response,
-                "No se puede eliminar la marca porque tiene {$prodCount} producto(s) asociado(s).",
-                409
-            );
-        }
-
-        $stmt = $this->db->prepare("DELETE FROM brands WHERE id = :id");
+        $stmt = $this->db->prepare("DELETE FROM machinery_brands WHERE id = :id");
         $stmt->execute([':id' => $id]);
 
         return $this->jsonResponse($response, [
             'success' => true,
-            'message' => 'Marca eliminada exitosamente',
+            'message' => 'Marca de maquinaria eliminada exitosamente',
             'deletedId' => $id,
         ]);
     }
@@ -147,6 +139,7 @@ class BrandController extends BaseController
             'id' => $row['id'],
             'name' => $row['name'],
             'slug' => $row['slug'],
+            'category' => $row['category'] ?? 'pesada',
             'description' => $row['description'] ?? '',
             'logoUrl' => $row['logo_url'] ?? null,
             'createdAt' => $row['created_at'] ?? null,
@@ -158,7 +151,6 @@ class BrandController extends BaseController
         $slug = iconv('UTF-8', 'ASCII//TRANSLIT', $name);
         $slug = preg_replace('/[^a-zA-Z0-9 -]/', '', $slug);
         $slug = strtolower(trim(substr($slug, 0, 80)));
-        $slug = preg_replace('/[ -]+/', '-', $slug);
-        return $slug ?: 'brand-' . uniqid();
+        return preg_replace('/[ -]+/', '-', $slug);
     }
 }

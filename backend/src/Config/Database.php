@@ -235,6 +235,98 @@ class Database
             ){$tableOpts};
         ");
 
+        // 7. Clients Table (Gestión Comercial de Clientes)
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS clients (
+                id VARCHAR(100) PRIMARY KEY,
+                name VARCHAR(150) NOT NULL,
+                email VARCHAR(191) NOT NULL,
+                phone VARCHAR(50) NOT NULL,
+                company VARCHAR(150) NULL,
+                document_type VARCHAR(20) DEFAULT 'RUC',
+                document_number VARCHAR(30) NULL,
+                address TEXT,
+                notes TEXT,
+                user_id VARCHAR(100) NULL,
+                created_at TEXT,
+                updated_at TEXT
+            ){$tableOpts};
+        ");
+
+        // 8. Machinery Brands Table
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS machinery_brands (
+                id VARCHAR(100) PRIMARY KEY,
+                name VARCHAR(150) NOT NULL,
+                slug VARCHAR(180) NOT NULL,
+                category VARCHAR(50) DEFAULT 'pesada',
+                description TEXT,
+                logo_url TEXT,
+                created_at TEXT
+            ){$tableOpts};
+        ");
+
+        // 9. Machineries Table
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS machineries (
+                id VARCHAR(100) PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                slug VARCHAR(255) NOT NULL,
+                category VARCHAR(50) NOT NULL,
+                category_name VARCHAR(100) NOT NULL,
+                brand VARCHAR(150) NOT NULL,
+                brand_id VARCHAR(100) NULL,
+                model VARCHAR(100) NOT NULL,
+                description TEXT,
+                year INTEGER NOT NULL,
+                power_hp VARCHAR(50) NULL,
+                capacity VARCHAR(100) NULL,
+                operating_weight VARCHAR(50) NULL,
+                fuel_type VARCHAR(50) DEFAULT 'Diésel',
+                image_url TEXT,
+                gallery_images TEXT,
+                includes_operator INTEGER DEFAULT 1,
+                operator_details TEXT,
+                delivery_conditions TEXT,
+                min_rental_hours INTEGER DEFAULT 8,
+                status VARCHAR(30) DEFAULT 'available',
+                featured INTEGER DEFAULT 1,
+                technical_specs TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            ){$tableOpts};
+        ");
+
+        // 10. Machinery Rental Requests Table
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS machinery_rental_requests (
+                id VARCHAR(100) PRIMARY KEY,
+                machinery_id VARCHAR(100) NOT NULL,
+                machinery_name VARCHAR(255) NOT NULL,
+                machinery_brand VARCHAR(150) NULL,
+                machinery_model VARCHAR(100) NULL,
+                machinery_image_url TEXT,
+                client_id VARCHAR(100) NULL,
+                client_name VARCHAR(150) NOT NULL,
+                client_email VARCHAR(191) NOT NULL,
+                client_phone VARCHAR(50) NOT NULL,
+                obra_location VARCHAR(255) NOT NULL,
+                start_date TEXT NOT NULL,
+                end_date TEXT NOT NULL,
+                start_hour VARCHAR(20) DEFAULT '08:00',
+                end_hour VARCHAR(20) DEFAULT '17:00',
+                total_hours_or_days VARCHAR(100) NULL,
+                needs_operator INTEGER DEFAULT 1,
+                notes TEXT,
+                created_by VARCHAR(20) DEFAULT 'client',
+                status VARCHAR(30) DEFAULT 'pending',
+                approved_by VARCHAR(150) NULL,
+                approved_at TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            ){$tableOpts};
+        ");
+
         // Check if data is already seeded
         $checkStmt = $pdo->query("SELECT COUNT(*) FROM categories");
         $count = (int)$checkStmt->fetchColumn();
@@ -378,6 +470,145 @@ class Database
                     ':tags' => json_encode($p['tags'] ?? []),
                     ':created_at' => $p['createdAt'] ?? date('c'),
                     ':updated_at' => $p['updatedAt'] ?? date('c'),
+                ]);
+            }
+        }
+        // Seed Clients
+        if (!empty($data['clients'])) {
+            $stmt = $pdo->prepare("
+                INSERT INTO clients (id, name, email, phone, company, document_type, document_number, address, notes, user_id, created_at, updated_at)
+                VALUES (:id, :name, :email, :phone, :company, :document_type, :document_number, :address, :notes, :user_id, :created_at, :updated_at)
+            ");
+            foreach ($data['clients'] as $c) {
+                $stmt->execute([
+                    ':id' => $c['id'],
+                    ':name' => $c['name'],
+                    ':email' => $c['email'],
+                    ':phone' => $c['phone'],
+                    ':company' => $c['company'] ?? null,
+                    ':document_type' => $c['documentType'] ?? 'RUC',
+                    ':document_number' => $c['documentNumber'] ?? null,
+                    ':address' => $c['address'] ?? null,
+                    ':notes' => $c['notes'] ?? null,
+                    ':user_id' => $c['userId'] ?? null,
+                    ':created_at' => $c['createdAt'] ?? date('c'),
+                    ':updated_at' => $c['updatedAt'] ?? date('c'),
+                ]);
+            }
+        }
+
+        // Seed Machinery Brands
+        if (!empty($data['machineryBrands'])) {
+            $stmt = $pdo->prepare("
+                INSERT INTO machinery_brands (id, name, slug, category, description, logo_url, created_at)
+                VALUES (:id, :name, :slug, :category, :description, :logo_url, :created_at)
+            ");
+            foreach ($data['machineryBrands'] as $mb) {
+                $stmt->execute([
+                    ':id' => $mb['id'],
+                    ':name' => $mb['name'],
+                    ':slug' => $mb['slug'],
+                    ':category' => $mb['category'] ?? 'pesada',
+                    ':description' => $mb['description'] ?? '',
+                    ':logo_url' => $mb['logoUrl'] ?? null,
+                    ':created_at' => $mb['createdAt'] ?? date('c'),
+                ]);
+            }
+        }
+
+        // Seed Machineries
+        if (!empty($data['machinery'])) {
+            $stmt = $pdo->prepare("
+                INSERT INTO machineries (
+                    id, name, slug, category, category_name, brand, brand_id, model, description,
+                    year, power_hp, capacity, operating_weight, fuel_type, image_url, gallery_images,
+                    includes_operator, operator_details, delivery_conditions, min_rental_hours,
+                    status, featured, technical_specs, created_at, updated_at
+                ) VALUES (
+                    :id, :name, :slug, :category, :category_name, :brand, :brand_id, :model, :description,
+                    :year, :power_hp, :capacity, :operating_weight, :fuel_type, :image_url, :gallery_images,
+                    :includes_operator, :operator_details, :delivery_conditions, :min_rental_hours,
+                    :status, :featured, :technical_specs, :created_at, :updated_at
+                )
+            ");
+            foreach ($data['machinery'] as $m) {
+                $gallery = $m['galleryImages'] ?? [];
+                if (!empty($m['imageUrl']) && !in_array($m['imageUrl'], $gallery)) {
+                    array_unshift($gallery, $m['imageUrl']);
+                }
+                $stmt->execute([
+                    ':id' => $m['id'],
+                    ':name' => $m['name'],
+                    ':slug' => $m['slug'] ?? strtolower(str_replace(' ', '-', $m['name'])),
+                    ':category' => $m['category'],
+                    ':category_name' => $m['categoryName'] ?? 'Maquinaria Pesada',
+                    ':brand' => $m['brand'],
+                    ':brand_id' => $m['brandId'] ?? null,
+                    ':model' => $m['model'] ?? 'Estándar',
+                    ':description' => $m['description'] ?? '',
+                    ':year' => (int)($m['year'] ?? 2022),
+                    ':power_hp' => $m['powerHp'] ?? null,
+                    ':capacity' => $m['capacity'] ?? null,
+                    ':operating_weight' => $m['operatingWeight'] ?? null,
+                    ':fuel_type' => $m['fuelType'] ?? 'Diésel',
+                    ':image_url' => $m['imageUrl'] ?? null,
+                    ':gallery_images' => json_encode($gallery, JSON_UNESCAPED_SLASHES),
+                    ':includes_operator' => !empty($m['includesOperator']) ? 1 : 0,
+                    ':operator_details' => $m['operatorDetails'] ?? null,
+                    ':delivery_conditions' => $m['deliveryConditions'] ?? null,
+                    ':min_rental_hours' => (int)($m['minRentalHours'] ?? 8),
+                    ':status' => $m['status'] ?? 'available',
+                    ':featured' => !empty($m['featured']) ? 1 : 0,
+                    ':technical_specs' => json_encode($m['technicalSpecs'] ?? [], JSON_UNESCAPED_SLASHES),
+                    ':created_at' => $m['createdAt'] ?? date('c'),
+                    ':updated_at' => $m['updatedAt'] ?? date('c'),
+                ]);
+            }
+        }
+
+        // Seed Rental Requests
+        if (!empty($data['rentalRequests'])) {
+            $stmt = $pdo->prepare("
+                INSERT INTO machinery_rental_requests (
+                    id, machinery_id, machinery_name, machinery_brand, machinery_model, machinery_image_url,
+                    client_id, client_name, client_email, client_phone, obra_location,
+                    start_date, end_date, start_hour, end_hour, total_hours_or_days,
+                    needs_operator, notes, created_by, status, approved_by, approved_at,
+                    created_at, updated_at
+                ) VALUES (
+                    :id, :machinery_id, :machinery_name, :machinery_brand, :machinery_model, :machinery_image_url,
+                    :client_id, :client_name, :client_email, :client_phone, :obra_location,
+                    :start_date, :end_date, :start_hour, :end_hour, :total_hours_or_days,
+                    :needs_operator, :notes, :created_by, :status, :approved_by, :approved_at,
+                    :created_at, :updated_at
+                )
+            ");
+            foreach ($data['rentalRequests'] as $rr) {
+                $stmt->execute([
+                    ':id' => $rr['id'],
+                    ':machinery_id' => $rr['machineryId'],
+                    ':machinery_name' => $rr['machineryName'],
+                    ':machinery_brand' => $rr['machineryBrand'] ?? null,
+                    ':machinery_model' => $rr['machineryModel'] ?? null,
+                    ':machinery_image_url' => $rr['machineryImageUrl'] ?? null,
+                    ':client_id' => $rr['clientId'] ?? null,
+                    ':client_name' => $rr['clientName'],
+                    ':client_email' => $rr['clientEmail'],
+                    ':client_phone' => $rr['clientPhone'],
+                    ':obra_location' => $rr['obraLocation'],
+                    ':start_date' => $rr['startDate'],
+                    ':end_date' => $rr['endDate'],
+                    ':start_hour' => $rr['startHour'] ?? '08:00',
+                    ':end_hour' => $rr['endHour'] ?? '17:00',
+                    ':total_hours_or_days' => $rr['totalHoursOrDays'] ?? null,
+                    ':needs_operator' => !empty($rr['needsOperator']) ? 1 : 0,
+                    ':notes' => $rr['notes'] ?? null,
+                    ':created_by' => $rr['createdBy'] ?? 'client',
+                    ':status' => $rr['status'] ?? 'pending',
+                    ':approved_by' => $rr['approvedBy'] ?? null,
+                    ':approved_at' => $rr['approvedAt'] ?? null,
+                    ':created_at' => $rr['createdAt'] ?? date('c'),
+                    ':updated_at' => $rr['updatedAt'] ?? date('c'),
                 ]);
             }
         }
