@@ -184,6 +184,39 @@ export const MachineryRentalManagement: React.FC = () => {
     setIsAddingModalOpen(true);
   };
 
+  const lastTapRef = React.useRef<{ date: string; time: number }>({ date: '', time: 0 });
+
+  const handleCreateForDay = (dateStr: string) => {
+    setEditingRequest(null);
+    setFormMachineryId(machineries[0]?.id || '');
+    setFormClientName('');
+    setFormClientEmail('');
+    setFormClientPhone('');
+    setFormObraLocation('');
+    setFormStartDate(dateStr);
+    setFormEndDate(dateStr);
+    setFormStartHour('08:00');
+    setFormEndHour('17:00');
+    setFormTotalHoursOrDays('1 día (9 hrs/día)');
+    setFormNeedsOperator(true);
+    setFormStatus('approved');
+    setFormNotes('');
+    setIsAddingModalOpen(true);
+    showToast(`Registrando nuevo alquiler para el día ${dateStr}`, 'info');
+  };
+
+  const handleDayClickOrTap = (dateStr: string) => {
+    const now = Date.now();
+    if (lastTapRef.current.date === dateStr && now - lastTapRef.current.time < 400) {
+      // Double tap / double click detected!
+      lastTapRef.current = { date: '', time: 0 };
+      handleCreateForDay(dateStr);
+    } else {
+      lastTapRef.current = { date: dateStr, time: now };
+      setSelectedDayString(dateStr);
+    }
+  };
+
   const handleOpenEditModal = (req: MachineryRentalRequest) => {
     setEditingRequest(req);
     setFormMachineryId(req.machineryId);
@@ -571,42 +604,40 @@ export const MachineryRentalManagement: React.FC = () => {
 
                       {/* Status */}
                       <td className="px-4 py-3.5">
-                        {req.status === 'pending' ? (
-                          <div className="space-y-1">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                              <Clock className="w-3 h-3 text-amber-600 animate-pulse" />
-                              <span>Pendiente de Aprobación</span>
-                            </span>
-                            <span className="text-[10px] text-stone-400 block">
-                              Por validar en calendario
-                            </span>
-                          </div>
-                        ) : req.status === 'approved' ? (
-                          <div className="space-y-0.5">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                              <span>Aprobado / Agendado</span>
-                            </span>
-                            {req.approvedBy && (
-                              <span className="text-[10px] text-stone-400 block truncate max-w-[140px]">
-                                Por: {req.approvedBy}
-                              </span>
-                            )}
-                          </div>
-                        ) : req.status === 'completed' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-800">
-                            <span>Completado</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800">
-                            <span>Rechazado</span>
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={req.status}
+                            onChange={(e) => {
+                              const newStatus = e.target.value as RentalRequestStatus;
+                              updateRentalRequest(req.id, {
+                                status: newStatus,
+                                approvedBy: newStatus === 'approved' ? (req.approvedBy || currentUser?.name || 'Administrador') : req.approvedBy,
+                                approvedAt: newStatus === 'approved' ? (req.approvedAt || new Date().toISOString()) : req.approvedAt,
+                              });
+                              showToast(`Estado cambiado a ${newStatus === 'approved' ? 'Aprobada' : newStatus === 'pending' ? 'Pendiente' : newStatus === 'completed' ? 'Completada' : 'Rechazada'}`, 'success');
+                            }}
+                            className={`text-[11px] font-bold px-2 py-1 rounded-lg border cursor-pointer focus:ring-2 focus:ring-yellow-400 ${
+                              req.status === 'pending'
+                                ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                : req.status === 'approved'
+                                ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                                : req.status === 'completed'
+                                ? 'bg-stone-100 text-stone-800 border-stone-300'
+                                : 'bg-red-50 text-red-900 border-red-300'
+                            }`}
+                            title="Cambiar estado de la solicitud directamente"
+                          >
+                            <option value="pending">⏳ Pendiente</option>
+                            <option value="approved">✅ Aprobada (Agendada)</option>
+                            <option value="completed">🏁 Completada</option>
+                            <option value="rejected">❌ Rechazada</option>
+                          </select>
+                        </div>
                       </td>
 
                       {/* Actions */}
                       <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1">
+                        <div className="inline-flex items-center gap-1.5">
                           {req.status === 'pending' && (
                             <button
                               onClick={() => handleApprove(req.id)}
@@ -617,15 +648,14 @@ export const MachineryRentalManagement: React.FC = () => {
                             </button>
                           )}
 
-                          {req.status === 'approved' && (
-                            <button
-                              onClick={() => handleComplete(req.id)}
-                              className="px-2.5 py-1 bg-stone-800 hover:bg-stone-900 text-white rounded-lg text-xs font-semibold transition-colors"
-                              title="Marcar alquiler como culminado"
-                            >
-                              Completar
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleOpenEditModal(req)}
+                            className="px-2.5 py-1 bg-amber-50 hover:bg-yellow-400 text-amber-950 rounded-lg text-xs font-bold transition-colors border border-amber-300 flex items-center gap-1 shadow-xs"
+                            title="Editar todos los datos de la solicitud"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span>Editar</span>
+                          </button>
 
                           <button
                             onClick={() => setInspectingRequest(req)}
@@ -633,14 +663,6 @@ export const MachineryRentalManagement: React.FC = () => {
                             title="Ver ficha completa de la solicitud"
                           >
                             <Eye className="w-4 h-4" />
-                          </button>
-
-                          <button
-                            onClick={() => handleOpenEditModal(req)}
-                            className="p-1.5 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-lg"
-                            title="Editar solicitud"
-                          >
-                            <Edit2 className="w-4 h-4" />
                           </button>
 
                           <button
@@ -692,7 +714,11 @@ export const MachineryRentalManagement: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 text-[11px] font-semibold">
+                <CalendarIcon className="w-3.5 h-3.5 text-amber-600" />
+                <span>Tip: <strong>Doble clic o doble toque</strong> en cualquier día para agendar nuevo alquiler</span>
+              </div>
               <button
                 onClick={prevMonth}
                 className="p-2 rounded-xl border border-stone-200 hover:bg-stone-50 text-stone-700 transition-colors"
@@ -730,7 +756,7 @@ export const MachineryRentalManagement: React.FC = () => {
             </div>
 
             {/* Days cells */}
-            <div className="grid grid-cols-7 divide-x divide-y divide-stone-100 text-xs">
+            <div className="grid grid-cols-7 divide-x divide-y divide-stone-100 text-xs select-none">
               {/* Padding before day 1 */}
               {Array.from({ length: startOffset }).map((_, i) => (
                 <div key={`empty-${i}`} className="min-h-[110px] bg-stone-50/40 p-2 opacity-30" />
@@ -748,26 +774,42 @@ export const MachineryRentalManagement: React.FC = () => {
                 return (
                   <div
                     key={dateStr}
-                    onClick={() => setSelectedDayString(dateStr)}
-                    className={`min-h-[120px] p-2 flex flex-col justify-between transition-colors cursor-pointer group ${
+                    onClick={() => handleDayClickOrTap(dateStr)}
+                    onDoubleClick={() => handleCreateForDay(dateStr)}
+                    className={`min-h-[120px] p-2 flex flex-col justify-between transition-colors cursor-pointer group relative ${
                       isSelected
                         ? 'bg-yellow-50/80 ring-2 ring-inset ring-yellow-400'
                         : bookingsOnDay.length > 0
                         ? 'bg-white hover:bg-stone-50/80'
                         : 'bg-white hover:bg-stone-50/40'
                     }`}
+                    title="Doble clic o doble toque para agregar alquiler en esta fecha"
                   >
                     {/* Day number header */}
                     <div className="flex items-center justify-between mb-1.5">
-                      <span
-                        className={`w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center ${
-                          isSelected
-                            ? 'bg-yellow-400 text-stone-950 font-bold shadow-xs'
-                            : 'text-stone-800 group-hover:text-amber-900'
-                        }`}
-                      >
-                        {dayNum}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center ${
+                            isSelected
+                              ? 'bg-yellow-400 text-stone-950 font-bold shadow-xs'
+                              : 'text-stone-800 group-hover:text-amber-900'
+                          }`}
+                        >
+                          {dayNum}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateForDay(dateStr);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 hover:bg-yellow-300 p-0.5 rounded text-stone-800 transition-opacity"
+                          title="Hacer clic para ingresar alquiler en este día"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
 
                       {bookingsOnDay.length > 0 && (
                         <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded-md">
@@ -833,8 +875,18 @@ export const MachineryRentalManagement: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">
-                  {selectedDayBookings.length} máquina(s) en servicio
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                    {selectedDayBookings.length} máquina(s) en servicio
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCreateForDay(selectedDayString)}
+                    className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-stone-950 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Nuevo Alquiler en este Día</span>
+                  </button>
                 </div>
               </div>
 

@@ -108,7 +108,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     const created = addBrand({
       name: newBrandName.trim(),
       slug,
-      origin: newBrandOrigin.trim() || 'Perú',
     });
     setBrandId(created.id);
     setNewBrandName('');
@@ -310,7 +309,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   <option value="">-- Seleccionar Marca --</option>
                   {brands.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.name} ({b.origin || 'Nacional'})
+                      {b.name}
                     </option>
                   ))}
                 </select>

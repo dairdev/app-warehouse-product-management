@@ -54,9 +54,72 @@ CREATE TABLE brands (
     name VARCHAR(150) NOT NULL,
     slug VARCHAR(180) NOT NULL UNIQUE,
     description TEXT NULL,
-    origin VARCHAR(100) DEFAULT 'Perú',
     logo_url TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE machinery_brands (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    slug VARCHAR(180) NOT NULL UNIQUE,
+    category VARCHAR(50) DEFAULT 'pesada',
+    description TEXT NULL,
+    logo_url TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE machineries (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    category ENUM('pesada', 'liviana', 'concreto', 'compactacion', 'transporte') NOT NULL,
+    category_name VARCHAR(100) NOT NULL,
+    brand VARCHAR(150) NOT NULL,
+    brand_id VARCHAR(100) NULL,
+    model VARCHAR(100) NOT NULL,
+    year INT NOT NULL,
+    power VARCHAR(100) NULL,
+    capacity VARCHAR(100) NULL,
+    rate_hourly DECIMAL(10,2) NULL,
+    rate_daily DECIMAL(10,2) NULL,
+    rate_monthly DECIMAL(10,2) NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'PEN',
+    fuel_type VARCHAR(50) NULL,
+    includes_operator TINYINT(1) DEFAULT 1,
+    min_rental_hours INT DEFAULT 8,
+    features JSON NULL,
+    specifications JSON NULL,
+    image_url TEXT NULL,
+    photos JSON NULL,
+    is_available TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE machinery_rental_requests (
+    id VARCHAR(100) PRIMARY KEY,
+    machinery_id VARCHAR(100) NOT NULL,
+    machinery_name VARCHAR(255) NOT NULL,
+    machinery_brand VARCHAR(150) NULL,
+    machinery_model VARCHAR(100) NULL,
+    machinery_image_url TEXT NULL,
+    client_name VARCHAR(150) NOT NULL,
+    client_email VARCHAR(191) NOT NULL,
+    client_phone VARCHAR(50) NOT NULL,
+    obra_location VARCHAR(255) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    start_hour VARCHAR(20) DEFAULT '08:00',
+    end_hour VARCHAR(20) DEFAULT '17:00',
+    total_hours_or_days VARCHAR(100) NULL,
+    needs_operator TINYINT(1) DEFAULT 1,
+    notes TEXT NULL,
+    created_by ENUM('client', 'admin') NOT NULL DEFAULT 'client',
+    status ENUM('pending', 'approved', 'completed', 'rejected') NOT NULL DEFAULT 'pending',
+    approved_by VARCHAR(150) NULL,
+    approved_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rentals_machinery FOREIGN KEY (machinery_id) REFERENCES machineries(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE products (

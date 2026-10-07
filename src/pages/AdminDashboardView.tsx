@@ -324,7 +324,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     if (editingBrand) {
       updateBrand(editingBrand.id, {
         name: brandName.trim(),
-        origin: brandOrigin.trim() || 'Perú',
         description: brandDesc.trim(),
         slug,
       });
@@ -332,7 +331,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     } else {
       addBrand({
         name: brandName.trim(),
-        origin: brandOrigin.trim() || 'Perú',
         description: brandDesc.trim(),
         slug,
       });
@@ -340,14 +338,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     }
 
     setBrandName('');
-    setBrandOrigin('');
     setBrandDesc('');
   };
 
   const handleStartEditBrand = (brand: Brand) => {
     setEditingBrand(brand);
     setBrandName(brand.name);
-    setBrandOrigin(brand.origin || 'Perú');
     setBrandDesc(brand.description || '');
     setIsAddingBrand(false);
   };
@@ -395,16 +391,36 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={() => {
-                  setEditingProduct(null);
-                  setIsProductModalOpen(true);
-                }}
-                className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-stone-950 text-xs font-bold rounded-xl flex items-center gap-2 shadow-xs transition-colors"
+                onClick={() => setActiveTab('products')}
+                className={`px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition-all cursor-pointer ${
+                  activeTab === 'products'
+                    ? 'bg-yellow-400 text-stone-950 shadow-md ring-2 ring-yellow-400/50'
+                    : 'bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 hover:border-yellow-400/60'
+                }`}
+                title="Ir a Gestión de Materiales"
               >
-                <Plus className="w-4 h-4" />
-                <span>Nuevo Material</span>
+                <Package className="w-4 h-4" />
+                <span>Gestión de Materiales</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('rentals')}
+                className={`px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 transition-all cursor-pointer ${
+                  activeTab === 'rentals'
+                    ? 'bg-yellow-400 text-stone-950 shadow-md ring-2 ring-yellow-400/50'
+                    : 'bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 hover:border-yellow-400/60'
+                }`}
+                title="Ir a Solicitudes de Alquiler"
+              >
+                <CalendarDays className="w-4 h-4 text-yellow-400" />
+                <span>Solicitud de Alquiler</span>
+                {pendingRentalsCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-500 text-stone-950 animate-pulse">
+                    {pendingRentalsCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -1285,11 +1301,17 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
                 <button
                   onClick={() => {
-                    setIsAddingBrand(!isAddingBrand);
-                    setEditingBrand(null);
-                    setBrandName('');
-                    setBrandOrigin('Perú');
-                    setBrandDesc('');
+                    if (isAddingBrand || editingBrand) {
+                      setIsAddingBrand(false);
+                      setEditingBrand(null);
+                      setBrandName('');
+                      setBrandDesc('');
+                    } else {
+                      setIsAddingBrand(true);
+                      setEditingBrand(null);
+                      setBrandName('');
+                      setBrandDesc('');
+                    }
                   }}
                   className="px-3.5 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
                 >
@@ -1307,7 +1329,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   <div className="font-bold text-xs text-stone-900">
                     {editingBrand ? `Editando marca: ${editingBrand.name}` : 'Registrar Nueva Marca:'}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold text-stone-600 mb-1">
                         Nombre de la Marca *
@@ -1318,19 +1340,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         value={brandName}
                         onChange={(e) => setBrandName(e.target.value)}
                         placeholder="Ej: Aceros Arequipa"
-                        className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-stone-600 mb-1">
-                        País de Origen / Procedencia
-                      </label>
-                      <input
-                        type="text"
-                        value={brandOrigin}
-                        onChange={(e) => setBrandOrigin(e.target.value)}
-                        placeholder="Ej: Perú, Gerdau, UNACEM"
                         className="w-full text-xs px-3 py-2 rounded-lg border border-stone-300 bg-white"
                       />
                     </div>
@@ -1383,9 +1392,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       <div>
                         <div className="flex items-start justify-between gap-2">
                           <h4 className="font-bold text-sm text-stone-900">{brand.name}</h4>
-                          <span className="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded font-mono">
-                            {brand.origin || 'Nacional'}
-                          </span>
                         </div>
                         <p className="text-xs text-stone-500 mt-1 line-clamp-2">
                           {brand.description || 'Proveedor certificado de materiales pesados.'}

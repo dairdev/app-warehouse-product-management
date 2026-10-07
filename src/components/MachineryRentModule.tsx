@@ -142,52 +142,54 @@ export const MachineryRentModule: React.FC<MachineryRentModuleProps> = ({
   };
 
   return (
-    <div className="space-y-10">
-      {/* Module Hero Banner */}
-      <section className="bg-stone-900 text-white rounded-3xl p-6 sm:p-10 border border-stone-800 relative overflow-hidden shadow-sm">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-yellow-400/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-        <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-stone-800/90 text-yellow-400 text-xs font-semibold uppercase tracking-wider mb-4 border border-stone-700">
-            <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
-            <span>Módulo de Alquiler y Despacho a Pie de Obra</span>
+    <div className="space-y-8">
+      {/* Module Hero Banner (Only shown in standalone mode to avoid duplication on Landing Page) */}
+      {standalone && (
+        <section className="bg-stone-900 text-white rounded-3xl p-6 sm:p-10 border border-stone-800 relative overflow-hidden shadow-sm">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-yellow-400/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+          <div className="relative z-10 max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-stone-800/90 text-yellow-400 text-xs font-semibold uppercase tracking-wider mb-4 border border-stone-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
+              <span>Módulo de Alquiler y Despacho a Pie de Obra</span>
+            </div>
+
+            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mb-3 leading-tight">
+              Alquiler de Maquinaria Pesada & Equipos de Construcción
+            </h2>
+
+            <p className="text-stone-300 text-sm sm:text-base leading-relaxed mb-6">
+              Flota moderna de retroexcavadoras, minicargadores Bobcat, volquetes de 15 m³, trompos mezcladores
+              y equipos de compactación certificados para ingenieros, contratistas y maestros de obra.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              <div className="flex items-center gap-2.5 bg-stone-800/60 p-3 rounded-xl border border-stone-700/60">
+                <ShieldCheck className="w-5 h-5 text-yellow-400 shrink-0" />
+                <div className="text-xs">
+                  <span className="font-bold text-white block">Equipos Certificados</span>
+                  <span className="text-stone-400 text-[11px]">Mantenimiento al día</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 bg-stone-800/60 p-3 rounded-xl border border-stone-700/60">
+                <UserCheck className="w-5 h-5 text-yellow-400 shrink-0" />
+                <div className="text-xs">
+                  <span className="font-bold text-white block">Con o Sin Operador</span>
+                  <span className="text-stone-400 text-[11px]">SCTR y EPP completo</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 bg-stone-800/60 p-3 rounded-xl border border-stone-700/60">
+                <Clock className="w-5 h-5 text-yellow-400 shrink-0" />
+                <div className="text-xs">
+                  <span className="font-bold text-white block">Tarifas Flexibles</span>
+                  <span className="text-stone-400 text-[11px]">Por hora, día o mes</span>
+                </div>
+              </div>
+            </div>
           </div>
-
-          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white mb-3 leading-tight">
-            Alquiler de Maquinaria Pesada & Equipos de Construcción
-          </h2>
-
-          <p className="text-stone-300 text-sm sm:text-base leading-relaxed mb-6">
-            Flota moderna de retroexcavadoras, minicargadores Bobcat, volquetes de 15 m³, trompos mezcladores
-            y equipos de compactación certificados para ingenieros, contratistas y maestros de obra.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="flex items-center gap-2.5 bg-stone-800/60 p-3 rounded-xl border border-stone-700/60">
-              <ShieldCheck className="w-5 h-5 text-yellow-400 shrink-0" />
-              <div className="text-xs">
-                <span className="font-bold text-white block">Equipos Certificados</span>
-                <span className="text-stone-400 text-[11px]">Mantenimiento al día</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 bg-stone-800/60 p-3 rounded-xl border border-stone-700/60">
-              <UserCheck className="w-5 h-5 text-yellow-400 shrink-0" />
-              <div className="text-xs">
-                <span className="font-bold text-white block">Con o Sin Operador</span>
-                <span className="text-stone-400 text-[11px]">SCTR y EPP completo</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 bg-stone-800/60 p-3 rounded-xl border border-stone-700/60">
-              <Clock className="w-5 h-5 text-yellow-400 shrink-0" />
-              <div className="text-xs">
-                <span className="font-bold text-white block">Tarifas Flexibles</span>
-                <span className="text-stone-400 text-[11px]">Por hora, día o mes</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Control Bar: Categories & Search */}
       <div className="space-y-4">
